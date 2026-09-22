@@ -14,7 +14,19 @@ PROYECTO = AQUI.parent
 # Se mete renombrada en la raíz del ejecutable, que es donde Windows busca las DLL del programa.
 dll_renombrada = AQUI / "build" / "dll" / "libssl-1_1-x64.dll"
 dll_renombrada.parent.mkdir(parents=True, exist_ok=True)
-shutil.copy2(Path(sys.base_prefix) / "DLLs" / "libssl-1_1.dll", dll_renombrada)
+_candidatos_ssl = [
+    Path(sys.base_prefix) / "DLLs" / "libssl-1_1.dll",
+    Path(sys.base_prefix) / "libssl-1_1.dll",
+    Path(sys.prefix) / "DLLs" / "libssl-1_1.dll",
+]
+_origen_ssl = next((c for c in _candidatos_ssl if c.is_file()), None)
+if _origen_ssl is None:
+    raise SystemExit(
+        "No encuentro libssl-1_1.dll (OpenSSL 1.1.1) en este Python.\n"
+        "GPS Libre necesita un Python 3.11 compilado con OpenSSL 1.1.1 (p. ej. 3.11.0-3.11.4 en Windows).\n"
+        "Los Python 3.11 nuevos traen OpenSSL 3 (libssl-3.dll), incompatible con sslpsk_pmd3 (túnel Wi-Fi)."
+    )
+shutil.copy2(_origen_ssl, dll_renombrada)
 # PyInstaller importa sslpsk_pmd3 para listar sus módulos: necesita encontrar la DLL también aquí.
 _directorios_dll = [os.add_dll_directory(str(c)) for c in (dll_renombrada.parent, Path(sys.base_prefix) / "DLLs")]
 

@@ -58,7 +58,7 @@ servida por un pequeño servidor FastAPI; la comunicación con el iPhone se hace
 ### Para desarrollar / construir
 | Requisito | Detalle |
 |---|---|
-| **Python** | **3.11 (x64)**. El Python de Windows 3.11 incluye `DLLs/libssl-1_1.dll` (OpenSSL 1.1.1), necesaria para el túnel Wi‑Fi. |
+| **Python** | **3.11 (x64) con OpenSSL 1.1.1** (trae `DLLs/libssl-1_1.dll`, necesaria para el túnel Wi‑Fi). En la práctica: **3.11.0–3.11.4**. ⚠️ Los Python 3.11 más nuevos (≈3.11.6+) traen **OpenSSL 3** (`libssl-3.dll`), que es **incompatible** con `sslpsk_pmd3`; con ellos el build falla con un mensaje claro. El CI fija `3.11.4` por esto. |
 | **Dependencias** | `pip install -r requirements.txt` (ver lista). |
 | **PyInstaller** | `pip install pyinstaller` (build de la app). |
 | **Inno Setup 6** | Solo para generar el **instalador** (`.exe`). `winget install JRSoftware.InnoSetup` o `choco install innosetup`. |

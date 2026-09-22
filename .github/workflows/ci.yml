@@ -16,10 +16,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configurar Python 3.11
+      - name: Configurar Python 3.11 (OpenSSL 1.1.1)
+        # GPS Libre necesita un Python 3.11 con OpenSSL 1.1.1 (trae libssl-1_1.dll), no OpenSSL 3.
+        # Los 3.11 nuevos (>= 3.11.6) traen OpenSSL 3 (libssl-3.dll), incompatible con sslpsk_pmd3.
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.11.4'
 
       - name: Instalar dependencias
         run: |
