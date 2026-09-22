@@ -1,0 +1,1673 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101F54">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="GPS Libre">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="/icono.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>GPS Libre</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<style>
+  :root {
+    --marino: #101F54; --azul: #1769FF; --azul-claro: #EAF1FF; --gris: #5A6B96; --borde: #DCE5F5;
+    --fondo: #F6F9FF; --rojo: #EF4444; --verde: #12B76A;
+    --violet: #633CFF; --grad: linear-gradient(120deg, #633CFF 0%, #1769FF 52%, #16D5E8 100%);
+    --display: "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }  /* si no, un display de clase (.puerta, .fila) gana al atributo hidden */
+  html, body { margin: 0; height: 100%; font: 14px/1.45 var(--display); color: #17233f; }
+  body { display: flex; }
+  aside { width: 380px; flex: none; background: #fff; border-right: 1px solid var(--borde); display: flex; flex-direction: column; overflow: hidden; }
+  #mapa { flex: 1; }
+  .cabecera { background: var(--marino); color: #fff; padding: 14px 16px; }
+  .cabecera h1 { margin: 0 0 8px; font-size: 18px; letter-spacing: .2px; }
+  .fila { display: flex; gap: 8px; align-items: center; }
+  .entre { justify-content: space-between; }
+  .contenido { overflow-y: auto; padding: 12px 16px 16px; flex: 1; }
+  .pie { padding: 12px 16px; border-top: 1px solid var(--borde); background: var(--fondo); }
+  .pastilla { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 9px; border-radius: 99px; background: rgba(255,255,255,.12); }
+  .pastilla i { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; display: inline-block; }
+  .pastilla.ok i { background: #4ade80; } .pastilla.espera i { background: #fbbf24; }
+  .disp { font-size: 12px; opacity: .8; margin-top: 6px; min-height: 16px; }
+  .via { display: flex; background: rgba(255,255,255,.12); border-radius: 8px; padding: 2px; }
+  .via button { border: none; background: transparent; color: #cbd5e1; padding: 4px 12px; font-size: 12.5px; border-radius: 6px; }
+  .via button.activa { background: #fff; color: var(--marino); font-weight: 600; }
+  button { font: inherit; border: 1px solid var(--borde); background: #fff; color: #0f172a; border-radius: 8px; padding: 7px 11px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--azul); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primario { background: var(--grad); border-color: transparent; color: #fff; }
+  button.peligro { background: #fff; border-color: #fecaca; color: var(--rojo); width: 100%; }
+  button.claro { background: rgba(255,255,255,.14); border-color: transparent; color: #fff; }
+  button.enlace { border: none; background: none; color: #bfdbfe; padding: 0; text-decoration: underline; font-size: 12px; }
+  input[type=text], input[type=number] { font: inherit; border: 1px solid var(--borde); border-radius: 8px; padding: 7px 9px; width: 100%; }
+  input:focus { outline: 2px solid var(--azul-claro); border-color: var(--azul); }
+  .buscador { position: relative; margin-bottom: 12px; }
+  .resultados { position: absolute; z-index: 1000; left: 0; right: 0; top: 38px; background: #fff; border: 1px solid var(--borde); border-radius: 8px; box-shadow: 0 8px 24px rgba(15,42,74,.12); max-height: 260px; overflow-y: auto; }
+  .resultados div { padding: 8px 10px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--fondo); }
+  .resultados div:hover { background: var(--azul-claro); }
+  .pestanas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--fondo); padding: 4px; border-radius: 10px; margin-bottom: 12px; }
+  .pestanas button { border: none; background: transparent; border-radius: 7px; padding: 7px 4px; color: var(--gris); }
+  .pestanas button.activa { background: #fff; color: var(--marino); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .tipo-ruta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .tipo-ruta button { padding: 6px 4px; font-size: 12.5px; }
+  .tipo-ruta button.activa { border-color: var(--azul); background: var(--azul-claro); color: var(--marino); font-weight: 600; }
+  .parada.esquina { width: 18px; height: 18px; border-width: 3px; border-radius: 4px; }
+  .ayuda { color: var(--gris); font-size: 12.5px; margin: 0 0 10px; }
+  .caja { border: 1px solid var(--borde); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+  .coords { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  .etiqueta { font-size: 12px; color: var(--gris); margin: 10px 0 4px; display: block; }
+  .modos { display: flex; flex-wrap: wrap; gap: 6px; }
+  .modos button { padding: 5px 10px; font-size: 12.5px; border-radius: 99px; }
+  .modos button.activa { border-color: var(--azul); background: var(--azul-claro); color: var(--marino); font-weight: 600; }
+  .colores { display: flex; gap: 10px; margin: 2px 0 4px; }
+  .colores button { width: 24px; height: 24px; border-radius: 50%; padding: 0; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--borde); }
+  .colores button.activa { box-shadow: 0 0 0 2px var(--marino); }
+  .opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .check { display: flex; gap: 7px; align-items: center; margin: 5px 0; font-size: 13px; }
+  .barra { height: 6px; background: var(--fondo); border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
+  .barra div { height: 100%; width: 0; background: #6366f1; transition: width .8s linear; }
+  .acciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .acciones button { padding: 5px 9px; font-size: 12.5px; }
+  .lista .item { display: flex; align-items: center; gap: 8px; padding: 7px 2px; border-bottom: 1px solid var(--fondo); font-size: 13px; }
+  .lista .nombre { flex: 1; cursor: pointer; min-width: 0; }
+  .lista .nombre span, .lista .nombre small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lista .nombre small { color: var(--gris); font-size: 11.5px; }
+  .lista .nombre:hover span { color: var(--azul); }
+  .lista .punto-color { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .lista button { padding: 3px 8px; font-size: 12px; }
+  .joy { width: 170px; height: 170px; border-radius: 50%; margin: 8px auto; background: radial-gradient(circle, #f1f5f9 0 55%, #e2e8f0 56% 100%); position: relative; touch-action: none; user-select: none; }
+  .joy .perilla { width: 64px; height: 64px; border-radius: 50%; background: var(--marino); position: absolute; left: 53px; top: 53px; box-shadow: 0 4px 10px rgba(15,42,74,.35); }
+  .joy .n { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--gris); }
+  kbd { border: 1px solid var(--borde); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; font-size: 11px; }
+  .banda { position: fixed; top: 0; left: 0; right: 0; z-index: 2500; background: #b91c1c; color: #fff; padding: 10px 14px; display: flex; gap: 12px; align-items: center; justify-content: center; font-size: 13.5px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  .banda button { background: #fff; border: none; color: #b91c1c; font-weight: 600; }
+  .aviso { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--marino); color: #fff; padding: 10px 16px; border-radius: 10px; max-width: min(560px, 90vw); z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,.2); font-size: 13.5px; }
+  .aviso.error { background: var(--rojo); }
+  .punto-iphone { width: 18px; height: 18px; border-radius: 50%; background: var(--azul); border: 3px solid #fff; animation: pulso 2s infinite; }
+  @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(37,99,235,.55); } 70% { box-shadow: 0 0 0 16px rgba(37,99,235,0); } 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); } }
+  .punto-real { width: 14px; height: 14px; border-radius: 50%; background: var(--verde); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  .parada { width: 26px; height: 26px; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35); cursor: grab; }
+  .destino { width: 16px; height: 16px; border-radius: 50% 50% 50% 0; background: var(--rojo); transform: rotate(-45deg); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  .control-mapa { background: #fff; border: none; border-radius: 8px; padding: 7px 11px; box-shadow: 0 1px 5px rgba(0,0,0,.25); font: 13px system-ui, sans-serif; cursor: pointer; }
+  .marca-mapa { display: flex; align-items: center; gap: 7px; background: rgba(255,255,255,.92); border-radius: 10px; padding: 6px 11px 6px 7px; box-shadow: 0 1px 6px rgba(15,42,74,.22); font: 700 14px var(--display, "Segoe UI"), system-ui, sans-serif; color: var(--marino); pointer-events: none; user-select: none; }
+  .marca-mapa svg { width: 22px; height: 22px; flex: none; }
+  .puerta { position: fixed; inset: 0; z-index: 3000; background: var(--marino); color: #fff; display: grid; place-items: center; padding: 24px; }
+  .puerta .tarjeta { width: min(340px, 100%); text-align: center; }
+  .puerta img { width: 72px; height: 72px; border-radius: 16px; margin-bottom: 10px; }
+  .puerta h2 { margin: 0 0 6px; font-size: 22px; }
+  .puerta p { margin: 0 0 18px; color: #cbd5e1; font-size: 14px; }
+  .puerta input[type=text] { text-align: center; font-size: 28px; letter-spacing: 8px; padding: 12px; border-radius: 12px; border: none; }
+  .puerta button { width: 100%; margin-top: 12px; padding: 12px; font-size: 16px; border-radius: 12px; }
+  .celular summary { cursor: pointer; font-weight: 600; color: var(--marino); }
+  .celular .qr { display: grid; place-items: center; margin: 10px 0; }
+  .celular .qr img, .celular .qr canvas { border: 8px solid #fff; box-shadow: 0 0 0 1px var(--borde); border-radius: 6px; }
+  .celular .pin { font: 700 22px ui-monospace, Consolas, monospace; letter-spacing: 4px; color: var(--marino); }
+  .ayudita { border: none; background: rgba(255,255,255,.14); color: #dbeafe; border-radius: 99px; width: 26px; height: 26px; padding: 0; font-size: 15px; line-height: 1; }
+  .bienvenida { position: fixed; inset: 0; z-index: 3200; background: linear-gradient(180deg, #ffffff 0%, #eef3fb 100%); color: #0f172a; display: grid; place-items: center; padding: 20px; overflow-y: auto; }
+  .bienvenida .tarjeta { width: min(430px, 100%); text-align: center; }
+  .bienvenida .globo { width: 84px; height: 84px; border-radius: 22px; margin: 6px auto 14px; display: block; box-shadow: 0 12px 30px rgba(37,99,235,.28); }
+  .bienvenida h2 { margin: 0 0 4px; font-size: 26px; letter-spacing: .2px; color: var(--marino); }
+  .bienvenida .lema { margin: 0 0 22px; color: var(--gris); font-size: 15px; }
+  .paso { display: flex; gap: 14px; align-items: flex-start; text-align: left; background: #fff; border: 1px solid var(--borde); border-radius: 14px; padding: 13px 15px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(15,42,74,.05); }
+  .paso .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--azul); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 15px; }
+  .paso b { display: block; font-size: 15px; margin-bottom: 2px; color: var(--marino); }
+  .paso span { color: var(--gris); font-size: 13px; line-height: 1.45; }
+  .bienvenida .empezar { width: 100%; margin-top: 8px; padding: 14px; font-size: 16px; font-weight: 700; border-radius: 12px; background: var(--grad); border: none; color: #fff; box-shadow: 0 8px 20px rgba(23,105,255,.35); }
+  .bienvenida .secundario { margin-top: 12px; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--gris); }
+  .bienvenida .secundario button { background: none; border: none; color: var(--azul); text-decoration: underline; font-size: 13px; padding: 0; }
+  .bienvenida .tranquilo { margin-top: 16px; font-size: 12px; color: #94a3b8; }
+  .precios { display: grid; gap: 8px; margin: 6px 0 14px; }
+  .precio { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--borde); border-radius: 12px; padding: 12px 14px; background: #fff; }
+  .precio.destacado { border-color: var(--azul); box-shadow: 0 0 0 2px var(--azul-claro); }
+  .precio .etq { font-weight: 600; color: var(--marino); }
+  .precio .etq small { display: block; font-weight: 400; color: var(--azul); font-size: 11px; }
+  .precio .val { font-weight: 700; font-size: 18px; color: var(--marino); }
+  .clave-fila { display: flex; gap: 8px; margin-top: 6px; }
+  .clave-fila input { flex: 1; text-align: center; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  .contador { font-size: 12px; margin-top: 6px; color: #fde68a; }
+  .contador b { color: #fff; }
+  .idioma-app { background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 4px 6px; font-size: 12px; cursor: pointer; }
+  .idioma-app option { color: #0f172a; }
+  @media (max-width: 760px) {
+    html, body { height: 100dvh; }
+    body { flex-direction: column-reverse; }
+    aside { width: 100%; height: 58dvh; border-right: none; }
+    .cabecera { padding: 10px 14px; }
+    .cabecera h1 { font-size: 16px; margin-bottom: 6px; }
+    button { min-height: 40px; }
+    .colores button { min-height: 0; }
+    .via button { min-height: 34px; }
+    input[type=text], input[type=number] { font-size: 16px; }  /* 16 px evita el zoom automático de Safari */
+    .pie { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+<div class="bienvenida" id="bienvenida" hidden>
+  <div class="tarjeta">
+    <img src="/icono.png?v=2" alt="" class="globo">
+    <h2>GPS Libre</h2>
+    <p class="lema">Pon tu iPhone en cualquier lugar del mundo, gratis.</p>
+    <div class="paso">
+      <div class="n">1</div>
+      <div><b>Conecta el iPhone con el cable</b><span data-ihtml="biev1">Desbloquéalo y toca <b>«Confiar»</b>. Solo la primera vez; luego funciona por Wi‑Fi.</span></div>
+    </div>
+    <div class="paso">
+      <div class="n">2</div>
+      <div><b>Activa el «Modo desarrollador» (una sola vez)</b><span>En el iPhone: Ajustes → Privacidad y seguridad → Modo desarrollador. Si no lo ves, pulsa «Conectar» y el programa te lo muestra. El iPhone se reinicia.</span></div>
+    </div>
+    <div class="paso">
+      <div class="n">3</div>
+      <div><b>Pulsa «Conectar» y toca el mapa</b><span>Tu iPhone «aparece» donde toques. También puedes hacer rutas o moverte con el joystick.</span></div>
+    </div>
+    <button class="empezar" id="btnEmpezar">Empezar</button>
+    <div class="secundario">
+      <span>¿Aún no tienes el iPhone a mano?</span>
+      <button id="btnBienvenidaDemo">Míralo en modo demo</button>
+    </div>
+    <p class="tranquilo">🔒 No movemos tu iPhone hasta que tú toques el mapa. Para volver a tu GPS real, un botón lo restaura.</p>
+  </div>
+</div>
+<div class="bienvenida" id="muro" hidden>
+  <div class="tarjeta">
+    <img src="/icono.png?v=2" alt="" class="globo">
+    <h2 id="muroTitulo">Activa GPS Libre</h2>
+    <p class="lema" id="muroTexto">Sigue moviendo tu iPhone donde quieras, sin límite.</p>
+    <div class="precios" id="precios"></div>
+    <p class="tranquilo" id="muroDescuento" style="margin-top:0;color:var(--free);font-weight:600" hidden></p>
+    <button class="empezar" id="btnComprar">Comprar ahora</button>
+    <p class="tranquilo" style="margin-top:14px">¿Ya tienes una clave? Pégala aquí:</p>
+    <div class="clave-fila">
+      <input type="text" id="claveLicencia" placeholder="GPSL-..." autocomplete="off">
+      <button class="primario" id="btnActivar" style="border-radius:12px">Activar</button>
+    </div>
+    <div class="secundario"><button id="btnCerrarMuro">Ahora no</button></div>
+  </div>
+</div>
+<div class="puerta" id="puerta" hidden>
+  <div class="tarjeta">
+    <img src="/icono.png?v=2" alt="">
+    <h2>GPS Libre</h2>
+    <p>Escribe el PIN que aparece en tu PC, en GPS Libre → «📱 Controlar desde el iPhone».</p>
+    <input type="text" id="pinEntrada" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+    <button class="primario" id="btnEntrar">Entrar</button>
+  </div>
+</div>
+<aside>
+  <div class="cabecera">
+    <div class="fila entre">
+      <div class="fila" style="gap:8px">
+        <h1>GPS Libre</h1>
+        <button class="ayudita" id="btnComo" title="¿Cómo funciona?">?</button>
+      </div>
+      <div class="fila" style="gap:8px">
+        <select class="idioma-app" id="idiomaApp" aria-label="Idioma" translate="no">
+          <option value="es">🌐 ES</option>
+          <option value="en">🇬🇧 EN</option>
+          <option value="fr">🇫🇷 FR</option>
+          <option value="pt">🇧🇷 PT</option>
+          <option value="zh">🇨🇳 中文</option>
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="ko">🇰🇷 한국어</option>
+        </select>
+        <span class="pastilla" id="pastilla"><i></i><span>Sin iPhone</span></span>
+      </div>
+    </div>
+    <div class="fila entre">
+      <div class="via" id="via">
+        <button data-via="usb" class="activa">Cable</button>
+        <button data-via="wifi">Wi‑Fi</button>
+      </div>
+      <button class="enlace" id="btnDemo">Probar sin iPhone</button>
+    </div>
+    <div class="fila" id="filaIp" hidden style="margin-top:8px">
+      <input type="text" id="ipIphone" placeholder="IP del iPhone (opcional: la busco yo)" autocomplete="off">
+    </div>
+    <div class="fila" style="margin-top:8px">
+      <button class="claro" id="btnConectar" style="flex:1">Conectar iPhone</button>
+    </div>
+    <div class="disp" id="disp"></div>
+    <div class="contador" id="contadorGratis" hidden></div>
+  </div>
+
+  <div class="contenido">
+    <div class="buscador">
+      <input type="text" id="buscar" placeholder="Buscar lugar o pegar «10.3910, -75.4794»" autocomplete="off">
+      <div class="resultados" id="resultados" hidden></div>
+    </div>
+
+    <div class="pestanas">
+      <button data-pestana="tele" class="activa">Teletransportar</button>
+      <button data-pestana="ruta">Ruta</button>
+      <button data-pestana="joy">Joystick</button>
+    </div>
+
+    <div id="bloqueVelocidad" hidden>
+      <div class="modos" id="modos">
+        <button data-modo="pie">🚶 A pie</button>
+        <button data-modo="correr">🏃 Corriendo</button>
+        <button data-modo="bici">🚲 Bici</button>
+        <button data-modo="carro">🚗 Carro</button>
+        <button data-modo="recta" id="modoRecta">📏 Línea recta</button>
+      </div>
+      <div class="fila" style="margin:8px 0 12px">
+        <span class="etiqueta" style="margin:0;white-space:nowrap">Velocidad km/h</span>
+        <input type="number" id="velocidad" min="1" max="300" step="0.5" value="5" style="max-width:90px">
+      </div>
+    </div>
+
+    <section data-panel="tele">
+      <p class="ayuda">Haz clic en el mapa o busca un lugar, y mueve el iPhone a ese punto.</p>
+      <div class="caja">
+        <div class="fila entre">
+          <span class="coords" id="objetivoTxt">Sin punto elegido</span>
+          <button id="btnFav" title="Guardar en favoritos" disabled>☆</button>
+        </div>
+        <button class="primario" id="btnTele" style="width:100%;margin-top:8px" disabled>Mover iPhone aquí</button>
+      </div>
+      <span class="etiqueta">Favoritos</span>
+      <div class="lista" id="favoritos"></div>
+    </section>
+
+    <section data-panel="ruta" hidden>
+      <div class="tipo-ruta" id="tipoRuta">
+        <button data-tipo="paradas" class="activa">📍 Por paradas</button>
+        <button data-tipo="zona">🗺️ Recorrer una zona</button>
+      </div>
+      <p class="ayuda" id="ayudaParadas" data-ihtml="a_paradas"><b>Un clic</b> en el mapa marca el destino y el iPhone sale desde donde está. Cada clic más añade una parada. <b>Arrastra</b> un punto para moverlo o <b>tócalo</b> para quitarlo.</p>
+      <div id="opcionesZona" hidden>
+        <p class="ayuda" data-ihtml="a_zona"><b>Toca el mapa</b> para marcar las esquinas de la zona (mínimo 3), por ejemplo todo el norte de la ciudad. Arrastra una esquina para ajustarla o tócala para quitarla.</p>
+        <span class="etiqueta">Qué tanto recorrer</span>
+        <div class="modos" id="coberturas">
+          <button data-c="zigzag" class="activa">〰️ Zigzag rápido</button>
+          <button data-c="25">25 % de las calles</button>
+          <button data-c="50">50 %</button>
+          <button data-c="75">75 %</button>
+          <button data-c="100">Todas las calles</button>
+        </div>
+        <button id="btnCalcularZona" class="primario" hidden style="width:100%;margin:10px 0">Calcular recorrido</button>
+        <div class="fila entre" id="opcionesZigzag" style="margin:10px 0;flex-wrap:wrap">
+          <span class="etiqueta" style="margin:0">Separación entre pasadas</span>
+          <div class="modos" id="densidades">
+            <button data-m="300">300 m</button>
+            <button data-m="800" class="activa">800 m</button>
+            <button data-m="2000">2 km</button>
+          </div>
+        </div>
+      </div>
+      <div class="caja">
+        <div class="fila entre"><span id="rutaResumen">Sin destino</span><span id="rutaEta" class="ayuda" style="margin:0"></span></div>
+        <div class="barra"><div id="barraProgreso"></div></div>
+        <div class="ayuda" id="rutaProgreso" style="margin:0"></div>
+        <div class="fila" style="margin-top:8px">
+          <button class="primario" id="btnIniciar" style="flex:1">Iniciar ruta</button>
+          <button id="btnPausa" disabled>Pausar</button>
+          <button id="btnDetener" disabled>Detener</button>
+        </div>
+        <button id="btnEliminarRuta" class="peligro" style="margin-top:8px">🗑️ Eliminar ruta y empezar otra</button>
+      </div>
+      <div class="fila entre">
+        <div class="colores" id="colores"></div>
+        <button id="btnGuardarRuta" class="primario" style="padding:5px 11px;font-size:12.5px">Guardar ruta</button>
+      </div>
+      <div class="opciones">
+        <label class="check"><input type="checkbox" id="chkDesdeActual" checked> Salir desde el iPhone</label>
+        <label class="check"><input type="checkbox" id="chkNatural" checked> Movimiento natural</label>
+        <label class="check"><input type="checkbox" id="chkBucle"> Repetir</label>
+        <label class="check"><input type="checkbox" id="chkIdaVuelta"> Ida y vuelta</label>
+      </div>
+      <div class="acciones">
+        <button id="btnDeshacer">Quitar última</button>
+        <button id="btnGpx">Importar GPX</button>
+        <button id="btnExportar">Exportar GPX</button>
+        <input type="file" id="archivoGpx" accept=".gpx" hidden>
+      </div>
+      <span class="etiqueta">Mis rutas</span>
+      <div class="lista" id="rutasGuardadas"></div>
+    </section>
+
+    <section data-panel="joy" hidden>
+      <p class="ayuda" data-ihtml="a_joy">Arrastra la perilla o usa <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / flechas. Suelta para quedarte quieto.</p>
+      <div class="joy" id="joy"><span class="n">N</span><div class="perilla" id="perilla"></div></div>
+      <p class="ayuda" style="text-align:center" id="joyTxt">Quieto</p>
+    </section>
+
+    <label class="check" style="margin-top:14px"><input type="checkbox" id="chkSeguir" checked> Centrar el mapa en el iPhone mientras se mueve</label>
+
+    <details class="caja celular" id="panelCelular" hidden style="margin-top:12px">
+      <summary>📱 Controlar desde el iPhone</summary>
+      <p class="ayuda" style="margin:8px 0 0">Con el iPhone en la misma Wi‑Fi que este PC, escanea el código con la cámara. Para dejarlo como app: en Safari, Compartir → «Agregar a pantalla de inicio».</p>
+      <div class="qr" id="qrCelular"></div>
+      <div class="fila entre"><span class="ayuda" style="margin:0">PIN</span><span class="pin" id="pinCelular">——————</span></div>
+      <div class="ayuda" id="urlCelular" style="margin:6px 0 8px;word-break:break-all"></div>
+      <div class="acciones"><button id="btnNuevoCodigo">Nuevo código QR</button><button id="btnNuevoPin">Cambiar PIN</button></div>
+    </details>
+  </div>
+
+  <div class="pie">
+    <button class="peligro" id="btnRestaurar">Restaurar GPS real del iPhone</button>
+    <button id="btnSalir" hidden style="width:100%;margin-top:8px">Cerrar GPS Libre</button>
+  </div>
+</aside>
+<div id="mapa"></div>
+<div class="banda" id="sinServidor" hidden>
+  <span>GPS Libre no está abierto en el PC. Ábrelo y esta página se reconecta sola.</span>
+  <button id="btnReintentar">Reintentar</button>
+</div>
+<div class="aviso" id="aviso" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+
+// ------------------------------------------------------------ utilidades
+async function api(ruta, cuerpo, metodo) {
+  let r;
+  try {
+    r = await fetch(ruta, {
+      method: metodo || (cuerpo === undefined ? 'GET' : 'POST'),
+      headers: { 'Content-Type': 'application/json' },
+      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+    });
+  } catch {
+    // El programa del PC no responde (cerrado, caído o reiniciado): se avisa y la página espera a que vuelva.
+    $('#sinServidor').hidden = false;
+    const caido = new Error('GPS Libre no está abierto en el PC.');
+    caido.red = true;
+    throw caido;
+  }
+  const datos = await r.json().catch(() => ({}));
+  if (r.status === 401) mostrarPuerta();
+  if (r.status === 402) {   // se acabaron los movimientos gratis
+    abrirMuro(datos.detail);
+    const e = new Error(datos.detail || 'Activa GPS Libre para seguir.');
+    e.licencia = true;
+    throw e;
+  }
+  if (!r.ok) {
+    const d = datos.detail;
+    throw new Error(typeof d === 'string' ? d : (d ? d.map((x) => x.msg).join('; ') : r.statusText));
+  }
+  return datos;
+}
+
+let temporizadorAviso;
+function avisar(texto, esError = false) {
+  const el = $('#aviso');
+  el.textContent = texto;
+  el.className = 'aviso' + (esError ? ' error' : '');
+  el.hidden = false;
+  clearTimeout(temporizadorAviso);
+  temporizadorAviso = setTimeout(() => (el.hidden = true), esError ? 9000 : 3500);
+}
+
+async function intentar(fn) {
+  // Los errores de licencia (muro) y de conexión (banda) ya tienen su propio aviso; no se repite en rojo.
+  try { return await fn(); } catch (e) { if (!e.licencia && !e.red) avisar(e.message, true); }
+}
+
+function leerLocal(clave, porDefecto) {
+  try { const v = localStorage.getItem(clave); return v === null ? porDefecto : JSON.parse(v); } catch { return porDefecto; }
+}
+function guardarLocal(clave, valor) {
+  try { localStorage.setItem(clave, JSON.stringify(valor)); } catch {}
+}
+
+const fmtCoord = (p) => `${p[0].toFixed(6)}, ${p[1].toFixed(6)}`;
+const fmtDist = (m) => (m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`);
+function fmtTiempo(s) {
+  if (!isFinite(s)) return '';
+  const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+  return h ? `${h} h ${m} min` : `${m} min`;
+}
+function longitud(puntos) {
+  let t = 0;
+  for (let i = 1; i < puntos.length; i++) t += mapa.distance(puntos[i - 1], puntos[i]);
+  return t;
+}
+const escaparXml = (s) => s.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
+
+// ------------------------------------------------------------ mapa
+const vistaGuardada = leerLocal('gps_vista', null);
+const mapa = L.map('mapa', { zoomControl: false, preferCanvas: true })   // lienzo: aguanta recorridos de miles de puntos
+  .setView(vistaGuardada ? vistaGuardada.centro : [4.711, -74.072], vistaGuardada ? vistaGuardada.zoom : 12);
+mapa.on('moveend', () => {
+  const c = mapa.getCenter();
+  guardarLocal('gps_vista', { centro: [c.lat, c.lng], zoom: mapa.getZoom() });
+});
+L.control.zoom({ position: 'bottomright' }).addTo(mapa);
+const capaCalles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+const capaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Esri' });
+L.control.layers({ 'Calles': capaCalles, 'Satélite': capaSatelite }, null, { position: 'bottomright' }).addTo(mapa);
+
+const ControlUbicacionReal = L.Control.extend({
+  onAdd() {
+    const boton = L.DomUtil.create('button', 'control-mapa');
+    boton.type = 'button';
+    boton.textContent = '📍 Mi ubicación real';
+    L.DomEvent.disableClickPropagation(boton);
+    boton.addEventListener('click', () => buscarUbicacionReal(true, true));
+    return boton;
+  },
+});
+new ControlUbicacionReal({ position: 'topright' }).addTo(mapa);
+
+// Marca de GPS Libre en la esquina superior izquierda del mapa.
+const ControlMarca = L.Control.extend({
+  onAdd() {
+    const d = L.DomUtil.create('div', 'marca-mapa');
+    d.innerHTML = '<svg viewBox="0 0 128 128" aria-hidden="true"><defs><linearGradient id="gpsMapP" x1="0.85" y1="0.05" x2="0.15" y2="1"><stop offset="0" stop-color="#25C9F2"/><stop offset=".4" stop-color="#2E77E8"/><stop offset="1" stop-color="#7E2BF2"/></linearGradient></defs><path d="M22 90 Q36 52 78 46" fill="none" stroke="#5C9BEF" stroke-width="7" stroke-linecap="round" opacity=".3"/><circle cx="44" cy="49" r="3" fill="#4C8DED"/><circle cx="54" cy="45" r="3.4" fill="#3A82EC"/><g transform="translate(24 86) scale(.5)" opacity=".32"><path d="M0 0 C -12 -20 -22 -26 -22 -40 A22 22 0 1 1 22 -40 C22 -26 12 -20 0 0 Z" fill="#9AAEED"/></g><ellipse cx="84" cy="101" rx="26" ry="7.5" fill="none" stroke="#22C7F0" stroke-width="4"/><ellipse cx="84" cy="101" rx="9" ry="2.6" fill="#fff"/><g transform="translate(84 95)"><path d="M0 0 C -12 -20 -22 -26 -22 -40 A22 22 0 1 1 22 -40 C22 -26 12 -20 0 0 Z" fill="url(#gpsMapP)"/><circle cx="0" cy="-40" r="9" fill="#fff"/></g></svg>GPS Libre';
+    return d;
+  },
+});
+new ControlMarca({ position: 'topleft' }).addTo(mapa);
+
+const icono = (html, tam, ancla) => L.divIcon({ className: '', html, iconSize: [tam, tam], iconAnchor: ancla || [tam / 2, tam / 2] });
+const marcadorIphone = L.marker([0, 0], { icon: icono('<div class="punto-iphone"></div>', 18), zIndexOffset: 1000, interactive: false });
+const marcadorReal = L.marker([0, 0], { icon: icono('<div class="punto-real"></div>', 14) }).bindTooltip('Tu ubicación real (aprox.)');
+const marcadorDestino = L.marker([0, 0], { icon: icono('<div class="destino"></div>', 16, [8, 16]) });
+const bordeRuta = L.polyline([], { color: '#ffffff', weight: 11, opacity: .95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(mapa);
+const lineaRuta = L.polyline([], { color: '#6366f1', weight: 6, opacity: .95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(mapa);
+const rastro = L.polyline([], { color: '#0f172a', weight: 4, opacity: .5, dashArray: '1 9', lineCap: 'round', interactive: false }).addTo(mapa);
+let marcadoresParadas = [];
+
+// Ubicación real: la del PC, que está junto al iPhone (cable o misma Wi‑Fi).
+// Primero la del navegador; si no la da, la que calcula el servidor (Windows o, en último caso, la IP).
+let ubicacionReal = null;
+function ponerUbicacionReal(p, centrar, fuente) {
+  ubicacionReal = p;
+  marcadorReal.setLatLng(p).addTo(mapa).setTooltipContent(`Tu ubicación real (${fuente})`);
+  if (centrar) mapa.setView(p, fuente === 'aprox. por internet' ? 13 : Math.max(mapa.getZoom(), 16));
+}
+async function ubicacionDelServidor(centrar, avisarSiFalla) {
+  try {
+    const r = await api('/api/ubicacion-real');
+    ponerUbicacionReal([r.lat, r.lon], centrar, r.fuente);
+  } catch (e) {
+    if (avisarSiFalla) avisar('No pude leer tu ubicación real. ' + e.message, true);
+  }
+}
+function buscarUbicacionReal(centrar, avisarSiFalla = false) {
+  if (!navigator.geolocation) return ubicacionDelServidor(centrar, avisarSiFalla);
+  navigator.geolocation.getCurrentPosition(
+    (p) => ponerUbicacionReal([p.coords.latitude, p.coords.longitude], centrar, 'navegador'),
+    () => ubicacionDelServidor(centrar, avisarSiFalla),
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 },
+  );
+}
+
+// ------------------------------------------------------------ estado de la interfaz
+let pestana = 'tele';
+let objetivo = null;
+let paradas = [];
+let geometria = [];          // puntos que realmente recorrerá la ruta
+let ultimoEstado = null;
+let ultimoErrorTs = 0;
+let centradoInicial = false;
+let guardados = { rutas: [], favoritos: [] };
+
+$$('.pestanas button').forEach((b) => b.addEventListener('click', () => cambiarPestana(b.dataset.pestana)));
+function cambiarPestana(p) {
+  pestana = p;
+  $$('.pestanas button').forEach((b) => b.classList.toggle('activa', b.dataset.pestana === p));
+  $$('section[data-panel]').forEach((s) => (s.hidden = s.dataset.panel !== p));
+  $('#bloqueVelocidad').hidden = p === 'tele';
+  $('#modoRecta').hidden = p !== 'ruta';
+  if (p === 'joy' && modoMovimiento === 'recta') elegirModo('pie', { recalcular: false });
+}
+
+mapa.on('click', (e) => {
+  const p = [e.latlng.lat, e.latlng.lng];
+  if (pestana === 'tele') elegirObjetivo(p);
+  else if (pestana === 'ruta') agregarPuntoDeRuta(p);
+});
+
+// ------------------------------------------------------------ conexión
+let via = leerLocal('gps_via', 'usb');
+function elegirVia(v) {
+  via = v === 'wifi' ? 'wifi' : 'usb';
+  guardarLocal('gps_via', via);
+  $$('#via button').forEach((b) => b.classList.toggle('activa', b.dataset.via === via));
+  $('#filaIp').hidden = via !== 'wifi';
+}
+$$('#via button').forEach((b) => b.addEventListener('click', () => elegirVia(b.dataset.via)));
+elegirVia(via);
+
+let conexionEnCurso = null;
+function asegurarConexion() {
+  if (ultimoEstado && ultimoEstado.conectado) return Promise.resolve();
+  if (!conexionEnCurso) {
+    conexionEnCurso = (async () => {
+      pintarPastilla('espera', 'Conectando…');
+      avisar(via === 'wifi'
+        ? 'Buscando el iPhone en tu Wi‑Fi… tiene que estar en la misma red que el PC, desbloqueado y con la pantalla encendida.'
+        : 'Conectando con el iPhone… desbloquéalo y déjalo con la pantalla encendida. La primera vez tarda hasta un minuto.');
+      const ip = via === 'wifi' ? ($('#ipIphone').value.trim() || null) : null;
+      const info = await api('/api/conectar', { via, ip });
+      avisar(`Conectado a ${info.nombre} (iOS ${info.ios}) por ${info.via}`);
+      await refrescar();
+    })().finally(() => (conexionEnCurso = null));
+  }
+  return conexionEnCurso;
+}
+
+$('#btnConectar').addEventListener('click', () => intentar(async () => {
+  if (ultimoEstado && ultimoEstado.conectado) {
+    await api('/api/desconectar', {});
+    avisar('iPhone desconectado');
+    await refrescar();
+  } else {
+    await asegurarConexion();
+  }
+}));
+$('#btnDemo').addEventListener('click', () => intentar(async () => {
+  await api('/api/conectar', { demo: true });
+  avisar('Modo demo: la interfaz funciona igual pero no mueve ningún iPhone.');
+  await refrescar();
+}));
+
+function pintarPastilla(clase, texto) {
+  const p = $('#pastilla');
+  p.className = 'pastilla ' + clase;
+  p.querySelector('span').textContent = texto;
+}
+
+// ------------------------------------------------------------ buscador
+$('#buscar').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const q = e.target.value.trim();
+  if (!q) return;
+  const m = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (m) {
+    const p = [parseFloat(m[1]), parseFloat(m[2])];
+    if (Math.abs(p[0]) > 90 || Math.abs(p[1]) > 180) return avisar('Coordenadas fuera de rango', true);
+    usarLugar(p);
+    return;
+  }
+  intentar(async () => {
+    const lista = await api('/api/buscar?q=' + encodeURIComponent(q));
+    const caja = $('#resultados');
+    caja.innerHTML = '';
+    if (!lista.length) { avisar('No encontré ese lugar', true); caja.hidden = true; return; }
+    lista.forEach((r) => {
+      const d = document.createElement('div');
+      d.textContent = r.nombre;
+      d.addEventListener('click', () => { caja.hidden = true; usarLugar([r.lat, r.lon]); });
+      caja.appendChild(d);
+    });
+    caja.hidden = false;
+  });
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('.buscador')) $('#resultados').hidden = true; });
+
+function usarLugar(p) {
+  mapa.flyTo(p, Math.max(mapa.getZoom(), 16));
+  if (pestana === 'ruta') agregarPuntoDeRuta(p);
+  else { if (pestana !== 'tele') cambiarPestana('tele'); elegirObjetivo(p); }
+}
+
+// ------------------------------------------------------------ guardados (rutas y favoritos, en disco)
+async function guardarLista(tipo) {
+  try { await api(`/api/guardados/${tipo}`, { elementos: guardados[tipo] }, 'PUT'); }
+  catch (e) { avisar('No se pudo guardar: ' + e.message, true); }
+}
+async function cargarGuardados() {
+  try { guardados = await api('/api/guardados'); } catch { return; }
+  const viejos = leerLocal('gps_favoritos', []);   // favoritos de la versión anterior, guardados en el navegador
+  if (Array.isArray(viejos) && viejos.length && !guardados.favoritos.length) {
+    guardados.favoritos = viejos;
+    await guardarLista('favoritos');
+    try { localStorage.removeItem('gps_favoritos'); } catch {}
+  }
+  pintarFavoritos();
+  pintarRutasGuardadas();
+}
+
+// ------------------------------------------------------------ teletransporte y favoritos
+function elegirObjetivo(p) {
+  objetivo = p;
+  marcadorDestino.setLatLng(p).addTo(mapa);
+  $('#objetivoTxt').textContent = fmtCoord(p);
+  $('#btnTele').disabled = false;
+  $('#btnFav').disabled = false;
+}
+$('#btnTele').addEventListener('click', () => intentar(async () => {
+  await asegurarConexion();
+  await api('/api/teletransportar', { lat: objetivo[0], lon: objetivo[1] });
+  rastro.setLatLngs([]);
+  avisar('iPhone movido a ' + fmtCoord(objetivo));
+  await refrescar();
+}));
+
+function pintarFavoritos() {
+  const caja = $('#favoritos');
+  caja.innerHTML = '';
+  if (!guardados.favoritos.length) { caja.innerHTML = '<p class="ayuda">Aún no hay favoritos. Elige un punto y pulsa ☆.</p>'; return; }
+  guardados.favoritos.forEach((f, i) => {
+    const fila = document.createElement('div');
+    fila.className = 'item';
+    fila.innerHTML = '<span class="nombre"><span></span><small></small></span><button title="Eliminar">✕</button>';
+    fila.querySelector('.nombre span').textContent = f.nombre;
+    fila.querySelector('.nombre small').textContent = fmtCoord([f.lat, f.lon]);
+    fila.querySelector('.nombre').addEventListener('click', () => {
+      mapa.flyTo([f.lat, f.lon], Math.max(mapa.getZoom(), 16));
+      elegirObjetivo([f.lat, f.lon]);
+    });
+    fila.querySelector('button').addEventListener('click', async () => {
+      guardados.favoritos.splice(i, 1);
+      pintarFavoritos();
+      await guardarLista('favoritos');
+    });
+    caja.appendChild(fila);
+  });
+}
+$('#btnFav').addEventListener('click', async () => {
+  const nombre = prompt('Nombre del favorito', fmtCoord(objetivo));
+  if (!nombre) return;
+  guardados.favoritos.push({ nombre, lat: objetivo[0], lon: objetivo[1] });
+  pintarFavoritos();
+  await guardarLista('favoritos');
+});
+
+// ------------------------------------------------------------ cómo se mueve y color
+const MODOS = {
+  pie: { v: 5, perfil: 'foot', calles: true, texto: 'a pie' },
+  correr: { v: 10, perfil: 'foot', calles: true, texto: 'corriendo' },
+  bici: { v: 18, perfil: 'bike', calles: true, texto: 'en bici' },
+  carro: { v: 50, perfil: 'car', calles: true, texto: 'en carro' },
+  recta: { v: null, perfil: 'foot', calles: false, texto: 'línea recta' },
+};
+let modoMovimiento = MODOS[leerLocal('gps_modo', 'pie')] ? leerLocal('gps_modo', 'pie') : 'pie';
+const velocidadActual = () => parseFloat($('#velocidad').value) || 5;
+
+function elegirModo(clave, { fijarVelocidad = true, recalcular = true } = {}) {
+  const cambiaPerfil = MODOS[clave].perfil !== MODOS[modoMovimiento].perfil;
+  modoMovimiento = clave;
+  guardarLocal('gps_modo', clave);
+  $$('#modos button').forEach((b) => b.classList.toggle('activa', b.dataset.modo === clave));
+  if (fijarVelocidad && MODOS[clave].v) $('#velocidad').value = MODOS[clave].v;
+  velocidadCambiada();
+  // A pie, en bici o en carro se usan calles distintas: el recorrido de una zona hay que recalcularlo.
+  if (recalcular && cambiaPerfil && tipoRuta === 'zona' && coberturaZona !== 'zigzag') descartarRecorridoZona();
+  if (recalcular) rutaCambiada();
+}
+$$('#modos button').forEach((b) => b.addEventListener('click', () => elegirModo(b.dataset.modo)));
+$('#velocidad').addEventListener('change', velocidadCambiada);
+function velocidadCambiada() {
+  pintarResumenRuta();
+  if (ultimoEstado && ultimoEstado.modo === 'ruta') intentar(() => api('/api/velocidad', { velocidad_kmh: velocidadActual() }));
+}
+
+const COLORES = ['#6366f1', '#ec4899', '#f97316', '#10b981', '#0ea5e9', '#a855f7'];
+let colorRuta = COLORES.includes(leerLocal('gps_color', '')) ? leerLocal('gps_color', '') : COLORES[0];
+function elegirColor(color) {
+  colorRuta = color;
+  guardarLocal('gps_color', color);
+  lineaRuta.setStyle({ color });
+  $('#barraProgreso').style.background = color;
+  $$('#colores button').forEach((b) => b.classList.toggle('activa', b.dataset.color === color));
+  pintarParadas();
+}
+COLORES.forEach((color) => {
+  const b = document.createElement('button');
+  b.dataset.color = color;
+  b.style.background = color;
+  b.title = 'Color de la ruta';
+  b.addEventListener('click', () => elegirColor(color));
+  $('#colores').appendChild(b);
+});
+
+// ------------------------------------------------------------ rutas
+function salidaDelIphone() {
+  return (ultimoEstado && ultimoEstado.posicion) || ubicacionReal;
+}
+function puntosDeSalida() {
+  const salida = salidaDelIphone();
+  return $('#chkDesdeActual').checked && salida ? [salida, ...paradas] : [...paradas];
+}
+
+function pintarParadas() {
+  marcadoresParadas.forEach((m) => m.remove());
+  pintarZona();
+  if (tipoRuta === 'zona') {
+    // En una zona los puntos los reparte el programa: se ven como puntitos, no como paradas numeradas.
+    marcadoresParadas = paradas.map((p) => L.circleMarker(p, {
+      radius: 3, color: '#fff', weight: 1, fillColor: colorRuta, fillOpacity: 1, interactive: false,
+    }).addTo(mapa));
+    return;
+  }
+  const saleDelIphone = $('#chkDesdeActual').checked && salidaDelIphone();
+  marcadoresParadas = paradas.map((p, i) => {
+    const texto = i === paradas.length - 1 ? '🏁' : (!saleDelIphone && i === 0 ? 'A' : String(i + 1));
+    const m = L.marker(p, { draggable: true, icon: icono(`<div class="parada" style="background:${colorRuta}">${texto}</div>`, 26) });
+    m.on('dragend', () => { const ll = m.getLatLng(); paradas[i] = [ll.lat, ll.lng]; rutaCambiada(); });
+    m.on('click', () => { paradas.splice(i, 1); rutaCambiada(); });
+    return m.addTo(mapa);
+  });
+}
+
+// ---- recorrer una zona entera
+let tipoRuta = 'paradas';
+let zona = [];                // esquinas del polígono
+let espaciadoZona = 800;      // metros entre pasadas del zigzag
+let marcadoresZona = [];
+const MAX_PUNTOS_ZONA = 400;
+const poligonoZona = L.polygon([], { color: '#6366f1', weight: 2, dashArray: '6 6', fillOpacity: .08, interactive: false }).addTo(mapa);
+
+function marcarTipoRuta(tipo) {
+  tipoRuta = tipo;
+  $$('#tipoRuta button').forEach((b) => b.classList.toggle('activa', b.dataset.tipo === tipo));
+  $('#ayudaParadas').hidden = tipo !== 'paradas';
+  $('#opcionesZona').hidden = tipo !== 'zona';
+}
+function marcarEspaciado(metros) {
+  espaciadoZona = metros;
+  $$('#densidades button').forEach((b) => b.classList.toggle('activa', Number(b.dataset.m) === metros));
+}
+$$('#tipoRuta button').forEach((b) => b.addEventListener('click', () => {
+  descartarRecorridoZona();
+  marcarTipoRuta(b.dataset.tipo);
+  paradas = [];
+  if (tipoRuta === 'zona') generarRecorridoDeZona(); else rutaCambiada();
+}));
+$$('#densidades button').forEach((b) => b.addEventListener('click', () => { marcarEspaciado(Number(b.dataset.m)); generarRecorridoDeZona(); }));
+
+// Nivel de cobertura: zigzag rápido (rejilla) o un porcentaje real de las calles, que calcula el servidor.
+let coberturaZona = 'zigzag';   // 'zigzag', '25', '50', '75' o '100'
+let recorridoZona = null;       // { puntos, calles_m, cubiertas_m, recorrido_m }
+const NIVELES = { zigzag: 'zigzag', 25: '25 % de calles', 50: '50 % de calles', 75: '75 % de calles', 100: 'todas las calles' };
+function marcarCobertura(nivel) {
+  coberturaZona = String(nivel);
+  $$('#coberturas button').forEach((b) => b.classList.toggle('activa', b.dataset.c === coberturaZona));
+  $('#opcionesZigzag').hidden = coberturaZona !== 'zigzag';
+  $('#btnCalcularZona').hidden = coberturaZona === 'zigzag';
+  $('#btnCalcularZona').textContent = coberturaZona === '100'
+    ? 'Calcular recorrido por todas las calles'
+    : `Calcular recorrido por el ${coberturaZona} % de las calles`;
+}
+$$('#coberturas button').forEach((b) => b.addEventListener('click', () => {
+  descartarRecorridoZona();
+  marcarCobertura(b.dataset.c);
+  generarRecorridoDeZona();
+}));
+// El servidor calcula la zona por sectores: aquí se van pidiendo los puntos nuevos y se dibujan según llegan,
+// así una zona enorme (una ciudad entera) se puede empezar a recorrer sin esperar a que termine todo.
+let trabajoZona = null;   // último resumen del cálculo en curso
+let sondeoZona = null;
+let sectores = [];
+const capaSectores = L.layerGroup().addTo(mapa);
+const ESTILO_SECTOR = {
+  pendiente: { color: '#94a3b8', weight: 1, dashArray: '4 4', fillOpacity: 0 },
+  descargando: { color: '#f59e0b', weight: 2, dashArray: null, fillColor: '#f59e0b', fillOpacity: .18 },
+  lista: { color: '#10b981', weight: 1, dashArray: null, fillColor: '#10b981', fillOpacity: .06 },
+  vacia: { color: '#cbd5e1', weight: 1, dashArray: null, fillColor: '#cbd5e1', fillOpacity: .08 },
+  error: { color: '#dc2626', weight: 2, dashArray: null, fillColor: '#dc2626', fillOpacity: .12 },
+};
+
+function descartarRecorridoZona() {
+  clearTimeout(sondeoZona);
+  if (trabajoZona) api('/api/zona/cancelar', {}).catch(() => {});
+  trabajoZona = null;
+  recorridoZona = null;
+  sectores = [];
+  capaSectores.clearLayers();
+}
+
+$('#btnCalcularZona').addEventListener('click', () => intentar(async () => {
+  if (zona.length < 3) throw new Error('Primero marca al menos 3 esquinas de la zona.');
+  descartarRecorridoZona();
+  $('#rutaResumen').textContent = 'Preparando los sectores de la zona…';
+  const r = await api('/api/zona/iniciar', {
+    poligono: zona, porcentaje: Number(coberturaZona), perfil: MODOS[modoMovimiento].perfil, inicio: salidaDelIphone(),
+  });
+  sectores = r.cajas.map((c) => L.rectangle([[c[0], c[1]], [c[2], c[3]]], { interactive: false }).addTo(capaSectores));
+  recorridoZona = { puntos: [], calles_m: 0, cubiertas_m: 0, recorrido_m: 0 };
+  trabajoZona = r;
+  avisar(`Calculando la zona en ${r.celdas_total} sectores: puedes iniciar la ruta en cuanto aparezca el primer tramo.`);
+  sondearZona();
+}));
+
+async function sondearZona() {
+  const encurso = trabajoZona;
+  if (!encurso) return;
+  let r;
+  try {
+    r = await api(`/api/zona/estado?id=${encurso.id}&desde=${recorridoZona.puntos.length}`);
+  } catch (e) {
+    avisar(e.message, true);
+    return;
+  }
+  if (trabajoZona !== encurso) return;   // se descartó mientras llegaba la respuesta
+  trabajoZona = r;
+  recorridoZona = {
+    puntos: r.puntos.length ? recorridoZona.puntos.concat(r.puntos) : recorridoZona.puntos,
+    calles_m: r.calles_m, cubiertas_m: r.cubiertas_m, recorrido_m: r.recorrido_m,
+  };
+  r.estado_celdas.forEach((estado, i) => sectores[i] && sectores[i].setStyle(ESTILO_SECTOR[estado]));
+  if (r.puntos.length) dibujarGeometria(recorridoZonaConSalida()); else pintarResumenRuta();
+
+  const faltanPuntos = recorridoZona.puntos.length < r.total_puntos;
+  if (!r.terminado || faltanPuntos) {
+    sondeoZona = setTimeout(sondearZona, faltanPuntos ? 200 : 1500);
+  } else if (r.error) {
+    avisar('El cálculo de la zona se detuvo: ' + r.error, true);
+  } else {
+    avisar(`Zona lista: ${fmtDist(r.cubiertas_m)} de calles en un recorrido de ${fmtDist(r.recorrido_m)}`);
+  }
+}
+function recorridoZonaConSalida() {
+  if (!recorridoZona) return [];
+  const salida = $('#chkDesdeActual').checked && salidaDelIphone();
+  return salida ? [salida, ...recorridoZona.puntos] : recorridoZona.puntos;
+}
+
+function agregarPuntoDeRuta(p) {
+  if (tipoRuta === 'zona') { zona.push(p); generarRecorridoDeZona(); }
+  else { paradas.push(p); rutaCambiada(); }
+}
+
+function pintarZona() {
+  marcadoresZona.forEach((m) => m.remove());
+  poligonoZona.setLatLngs(tipoRuta === 'zona' ? zona : []).setStyle({ color: colorRuta });
+  marcadoresZona = tipoRuta !== 'zona' ? [] : zona.map((p, i) => {
+    const m = L.marker(p, { draggable: true, icon: icono(`<div class="parada esquina" style="background:${colorRuta}"></div>`, 18) });
+    m.on('dragend', () => { const ll = m.getLatLng(); zona[i] = [ll.lat, ll.lng]; generarRecorridoDeZona(); });
+    m.on('click', () => { zona.splice(i, 1); generarRecorridoDeZona(); });
+    return m.addTo(mapa);
+  });
+}
+
+function dentroDelPoligono(p, vertices) {
+  let dentro = false;
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const [latI, lonI] = vertices[i], [latJ, lonJ] = vertices[j];
+    if ((latI > p[0]) !== (latJ > p[0]) && p[1] < ((lonJ - lonI) * (p[0] - latI)) / (latJ - latI) + lonI) dentro = !dentro;
+  }
+  return dentro;
+}
+
+function areaKm2(vertices) {
+  const lat0 = (vertices.reduce((s, p) => s + p[0], 0) / vertices.length) * Math.PI / 180;
+  const xy = vertices.map((p) => [p[1] * 111.32 * Math.cos(lat0), p[0] * 110.57]);
+  let doble = 0;
+  for (let i = 0, j = xy.length - 1; i < xy.length; j = i++) doble += xy[j][0] * xy[i][1] - xy[i][0] * xy[j][1];
+  return Math.abs(doble) / 2;
+}
+
+// Rejilla de puntos dentro de la zona, recorrida en zigzag: una fila hacia un lado y la siguiente de vuelta.
+function generarRecorridoDeZona() {
+  if (tipoRuta !== 'zona') return;
+  if (coberturaZona !== 'zigzag') {
+    descartarRecorridoZona();   // cambió la zona: el recorrido por calles hay que volver a calcularlo
+    paradas = [];
+    rutaCambiada();
+    return;
+  }
+  if (zona.length < 3) { paradas = []; rutaCambiada(); return; }
+  const lats = zona.map((v) => v[0]), lons = zona.map((v) => v[1]);
+  const latMin = Math.min(...lats), latMax = Math.max(...lats), lonMin = Math.min(...lons), lonMax = Math.max(...lons);
+  const dLat = espaciadoZona / 110574;
+  const dLon = espaciadoZona / (111320 * Math.cos(((latMin + latMax) / 2) * Math.PI / 180));
+  let puntos = [];
+  let fila = 0;
+  for (let lat = latMin + dLat / 2; lat < latMax; lat += dLat, fila++) {
+    const enFila = [];
+    for (let lon = lonMin + dLon / 2; lon < lonMax; lon += dLon) {
+      if (dentroDelPoligono([lat, lon], zona)) enFila.push([lat, lon]);
+    }
+    if (fila % 2) enFila.reverse();
+    puntos.push(...enFila);
+  }
+  if (!puntos.length) puntos = [[lats.reduce((a, b) => a + b) / zona.length, lons.reduce((a, b) => a + b) / zona.length]];
+  if (puntos.length > MAX_PUNTOS_ZONA) {
+    avisar(`La zona es muy grande para pasadas cada ${espaciadoZona} m (${puntos.length} puntos). Elige una separación mayor.`, true);
+    paradas = [];
+    rutaCambiada();
+    return;
+  }
+  // Empieza por el extremo del zigzag más cercano al iPhone.
+  const salida = salidaDelIphone();
+  if (salida && puntos.length > 1 && mapa.distance(salida, puntos[puntos.length - 1]) < mapa.distance(salida, puntos[0])) puntos.reverse();
+  paradas = puntos;
+  rutaCambiada();
+}
+
+const TRAMO_CALLES = 50;   // el servidor de rutas acepta hasta 60 puntos por consulta
+// Traza por calles en tramos que comparten el punto de unión, así sirve para rutas de cualquier tamaño.
+async function trazarPorCalles(puntos, perfil, cancelado) {
+  const resultado = [];
+  for (let i = 0; i < puntos.length - 1; i += TRAMO_CALLES - 1) {
+    if (cancelado()) return resultado;
+    const tramo = puntos.slice(i, i + TRAMO_CALLES);
+    const r = await api('/api/calles', { puntos: tramo, perfil });
+    resultado.push(...(resultado.length ? r.puntos.slice(1) : r.puntos));
+    if (puntos.length > TRAMO_CALLES) {
+      $('#rutaResumen').textContent = `Trazando por calles… ${Math.min(100, Math.round(((i + TRAMO_CALLES) / puntos.length) * 100))} %`;
+    }
+  }
+  return resultado;
+}
+
+// Borrador: lo que estás marcando se guarda en el navegador, así una recarga o un cierre no lo borra.
+function guardarBorrador() {
+  guardarLocal('gps_borrador', {
+    tipoRuta, paradas, zona, cobertura: coberturaZona, espaciado: espaciadoZona,
+    modo: modoMovimiento, color: colorRuta, desdeActual: $('#chkDesdeActual').checked,
+  });
+}
+
+function recuperarBorrador() {
+  const b = leerLocal('gps_borrador', null);
+  if (!b || (!b.paradas?.length && !b.zona?.length)) return;
+  cambiarPestana('ruta');   // si se recupera una ruta, se muestra donde se edita
+  marcarTipoRuta(b.tipoRuta === 'zona' ? 'zona' : 'paradas');
+  zona = b.zona || [];
+  paradas = b.paradas || [];
+  if (b.espaciado) marcarEspaciado(b.espaciado);
+  marcarCobertura(b.cobertura || 'zigzag');
+  if (COLORES.includes(b.color)) elegirColor(b.color);
+  if (MODOS[b.modo]) elegirModo(b.modo, { fijarVelocidad: false, recalcular: false });
+  $('#chkDesdeActual').checked = b.desdeActual !== false;
+  rutaCambiada();
+  const limites = paradas.length ? paradas : zona;
+  if (limites.length) mapa.fitBounds(L.latLngBounds(limites), { padding: [50, 50], maxZoom: 16 });
+  avisar('Recuperé la ruta que estabas marcando');
+}
+
+let temporizadorRuta;
+function rutaCambiada() {
+  pintarParadas();
+  guardarBorrador();
+  clearTimeout(temporizadorRuta);
+  temporizadorRuta = setTimeout(() => intentar(calcularGeometria), 300);
+}
+$('#chkDesdeActual').addEventListener('change', rutaCambiada);
+
+let calculoActual = 0;
+async function calcularGeometria() {
+  const id = ++calculoActual;
+  if (tipoRuta === 'zona' && coberturaZona !== 'zigzag') return dibujarGeometria(recorridoZonaConSalida());
+  const base = puntosDeSalida();
+  let puntos = base;
+  const modo = MODOS[modoMovimiento];
+  if (modo.calles && base.length >= 2) {
+    try {
+      puntos = await trazarPorCalles(base, modo.perfil, () => id !== calculoActual);
+    } catch (e) {
+      if (e.red) return geometria;   // el PC no responde: se conserva el trazo que ya estaba dibujado
+      avisar(e.message + ' Uso líneas rectas.', true);
+    }
+  }
+  if (id !== calculoActual) return geometria;   // ya llegó un cálculo más nuevo
+  return dibujarGeometria(puntos);
+}
+
+function dibujarGeometria(puntos) {
+  geometria = puntos;
+  const trazo = puntos.length >= 2 ? puntos : [];
+  bordeRuta.setLatLngs(trazo);
+  lineaRuta.setLatLngs(trazo);
+  pintarResumenRuta();
+  return geometria;
+}
+
+function pintarResumenRuta() {
+  const largo = geometria.length >= 2 ? longitud(geometria) : 0;
+  if (tipoRuta === 'zona') {
+    const area = zona.length >= 3 ? `Zona de ${areaKm2(zona).toFixed(1)} km²` : '';
+    let texto = `Marca las esquinas de la zona (${zona.length} de 3)`;
+    if (area && coberturaZona === 'zigzag') texto = `${area} · ${paradas.length} puntos · ${fmtDist(largo)}`;
+    else if (area && trabajoZona && !trabajoZona.terminado) {
+      const estimado = trabajoZona.celdas_listas >= 3
+        ? ` · ≈ ${fmtDist((trabajoZona.calles_m / trabajoZona.celdas_listas) * trabajoZona.celdas_total)} de calles en total`
+        : '';
+      texto = `Sector ${trabajoZona.celdas_listas} de ${trabajoZona.celdas_total} · ${fmtDist(trabajoZona.cubiertas_m)} de calles listas · recorrido de ${fmtDist(largo)}${estimado}`;
+    } else if (area && recorridoZona) texto = `${area} · ${fmtDist(recorridoZona.cubiertas_m)} de ${fmtDist(recorridoZona.calles_m)} de calles · recorrido de ${fmtDist(largo)}`;
+    else if (area) texto = `${area} · pulsa «Calcular recorrido»`;
+    $('#rutaResumen').textContent = texto;
+  } else {
+    $('#rutaResumen').textContent = paradas.length
+      ? `${paradas.length} parada${paradas.length === 1 ? '' : 's'} · ${fmtDist(largo)}`
+      : 'Sin destino';
+  }
+  $('#rutaEta').textContent = largo ? '≈ ' + fmtTiempo(largo / (velocidadActual() / 3.6)) : '';
+}
+
+$('#btnDeshacer').addEventListener('click', () => {
+  if (tipoRuta === 'zona') { zona.pop(); generarRecorridoDeZona(); } else { paradas.pop(); rutaCambiada(); }
+});
+$('#btnEliminarRuta').addEventListener('click', () => intentar(async () => {
+  const enMarcha = ultimoEstado && ultimoEstado.modo === 'ruta';
+  if (enMarcha) await api('/api/detener', {});
+  zona = [];
+  paradas = [];
+  descartarRecorridoZona();
+  rastro.setLatLngs([]);
+  $('#barraProgreso').style.width = '0';
+  $('#rutaProgreso').textContent = '';
+  if (tipoRuta === 'zona') generarRecorridoDeZona(); else rutaCambiada();
+  avisar(enMarcha ? 'Ruta detenida y eliminada: marca una nueva en el mapa' : 'Ruta eliminada: marca una nueva en el mapa');
+  if (enMarcha) await refrescar();
+}));
+
+async function iniciarRuta() {
+  await asegurarConexion();
+  const puntos = await calcularGeometria();
+  const porSectores = tipoRuta === 'zona' && coberturaZona !== 'zigzag' && trabajoZona;
+  if (puntos.length < 2) {
+    throw new Error(tipoRuta === 'zona' && coberturaZona !== 'zigzag'
+      ? (trabajoZona ? 'Espera unos segundos a que aparezca el primer tramo de la zona.' : 'Primero pulsa «Calcular recorrido».')
+      : 'Marca un destino en el mapa (o dos puntos si no sales desde el iPhone).');
+  }
+  await api('/api/ruta', {
+    // Con la zona a medio calcular se manda solo el arranque: el servidor alarga la ruta con cada sector nuevo.
+    puntos: porSectores ? puntos.slice(0, 1) : puntos,
+    trabajo_zona: porSectores ? trabajoZona.id : null,
+    velocidad_kmh: velocidadActual(),
+    bucle: $('#chkBucle').checked, ida_y_vuelta: $('#chkIdaVuelta').checked, natural: $('#chkNatural').checked,
+  });
+  rastro.setLatLngs([]);
+  avisar('Ruta en marcha');
+  await refrescar();
+}
+$('#btnIniciar').addEventListener('click', () => intentar(iniciarRuta));
+$('#btnPausa').addEventListener('click', () => intentar(async () => {
+  await api('/api/pausa', { pausado: !ultimoEstado.pausado });
+  await refrescar();
+}));
+$('#btnDetener').addEventListener('click', () => intentar(async () => { await api('/api/detener', {}); await refrescar(); }));
+
+// Guardar, cargar y exportar rutas
+$('#btnGuardarRuta').addEventListener('click', () => intentar(async () => {
+  if (!paradas.length && geometria.length < 2) throw new Error('Primero marca la ruta en el mapa.');
+  const nombre = prompt('Nombre de la ruta', `Ruta ${guardados.rutas.length + 1}`);
+  if (!nombre) return;
+  guardados.rutas.unshift({
+    id: Date.now().toString(36),
+    nombre,
+    paradas: paradas.map((p) => [p[0], p[1]]),
+    zona: tipoRuta === 'zona' ? zona.map((p) => [p[0], p[1]]) : null,
+    espaciado_m: espaciadoZona,
+    cobertura: coberturaZona,
+    // Solo se guardan los puntos de una zona ya terminada y que no sea enorme; si no, al cargarla se recalcula.
+    recorrido_zona: tipoRuta === 'zona' && coberturaZona !== 'zigzag' && recorridoZona
+      && (!trabajoZona || trabajoZona.terminado) && recorridoZona.puntos.length <= 60000 ? recorridoZona : null,
+    modo: modoMovimiento,
+    velocidad_kmh: velocidadActual(),
+    desde_actual: $('#chkDesdeActual').checked,
+    bucle: $('#chkBucle').checked,
+    ida_y_vuelta: $('#chkIdaVuelta').checked,
+    natural: $('#chkNatural').checked,
+    color: colorRuta,
+    distancia_m: Math.round(geometria.length >= 2 ? longitud(geometria) : 0),
+    creada: new Date().toISOString(),
+  });
+  pintarRutasGuardadas();
+  await guardarLista('rutas');
+  avisar(`Ruta «${nombre}» guardada`);
+}));
+
+function cargarRuta(r) {
+  cambiarPestana('ruta');
+  marcarTipoRuta(r.zona ? 'zona' : 'paradas');
+  zona = r.zona ? r.zona.map((p) => [p[0], p[1]]) : [];
+  if (r.espaciado_m) marcarEspaciado(r.espaciado_m);
+  descartarRecorridoZona();
+  marcarCobertura(r.cobertura || 'zigzag');
+  recorridoZona = r.recorrido_zona || null;
+  paradas = r.paradas.map((p) => [p[0], p[1]]);
+  $('#chkDesdeActual').checked = !!r.desde_actual;
+  $('#chkBucle').checked = !!r.bucle;
+  $('#chkIdaVuelta').checked = !!r.ida_y_vuelta;
+  $('#chkNatural').checked = r.natural !== false;
+  if (COLORES.includes(r.color)) elegirColor(r.color);
+  elegirModo(MODOS[r.modo] ? r.modo : 'pie', { fijarVelocidad: false, recalcular: false });
+  if (r.velocidad_kmh) $('#velocidad').value = r.velocidad_kmh;
+  rastro.setLatLngs([]);
+  rutaCambiada();
+  const limites = paradas.length ? paradas : zona;
+  if (limites.length) mapa.fitBounds(L.latLngBounds(limites), { padding: [50, 50], maxZoom: 17 });
+}
+
+function pintarRutasGuardadas() {
+  const caja = $('#rutasGuardadas');
+  caja.innerHTML = '';
+  if (!guardados.rutas.length) { caja.innerHTML = '<p class="ayuda">Todavía no hay rutas guardadas.</p>'; return; }
+  guardados.rutas.forEach((r) => {
+    const fila = document.createElement('div');
+    fila.className = 'item';
+    fila.innerHTML = '<span class="punto-color"></span><span class="nombre"><span></span><small></small></span>'
+      + '<button title="Cargar e iniciar">▶</button><button title="Eliminar">✕</button>';
+    fila.querySelector('.punto-color').style.background = r.color || COLORES[0];
+    fila.querySelector('.nombre span').textContent = r.nombre;
+    const n = r.paradas.length;
+    fila.querySelector('.nombre small').textContent =
+      `${r.zona ? `zona de ${areaKm2(r.zona).toFixed(1)} km² · ${NIVELES[r.cobertura] || 'zigzag'}` : `${n} parada${n === 1 ? '' : 's'}`} · ${fmtDist(r.distancia_m || 0)} · ${(MODOS[r.modo] || MODOS.pie).texto}`;
+    const [btnIniciar, btnEliminar] = fila.querySelectorAll('button');
+    fila.querySelector('.nombre').addEventListener('click', () => cargarRuta(r));
+    btnIniciar.addEventListener('click', () => intentar(async () => { cargarRuta(r); await iniciarRuta(); }));
+    btnEliminar.addEventListener('click', async () => {
+      if (!confirm(`¿Eliminar la ruta «${r.nombre}»?`)) return;
+      guardados.rutas = guardados.rutas.filter((x) => x.id !== r.id);
+      pintarRutasGuardadas();
+      await guardarLista('rutas');
+    });
+    caja.appendChild(fila);
+  });
+}
+
+$('#btnExportar').addEventListener('click', () => {
+  const puntos = geometria.length >= 2 ? geometria : paradas;
+  if (puntos.length < 2) return avisar('No hay ruta para exportar', true);
+  const trkpts = puntos.map((p) => `<trkpt lat="${p[0].toFixed(7)}" lon="${p[1].toFixed(7)}"></trkpt>`).join('');
+  const nombre = 'ruta-gps-libre';
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="GPS Libre" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${escaparXml(nombre)}</name><trkseg>${trkpts}</trkseg></trk></gpx>`;
+  const enlace = document.createElement('a');
+  enlace.href = URL.createObjectURL(new Blob([xml], { type: 'application/gpx+xml' }));
+  enlace.download = nombre + '.gpx';
+  enlace.click();
+  setTimeout(() => URL.revokeObjectURL(enlace.href), 2000);
+});
+
+$('#btnGpx').addEventListener('click', () => $('#archivoGpx').click());
+$('#archivoGpx').addEventListener('change', async (e) => {
+  const archivo = e.target.files[0];
+  e.target.value = '';
+  if (!archivo) return;
+  const xml = new DOMParser().parseFromString(await archivo.text(), 'application/xml');
+  let nodos = [...xml.getElementsByTagName('trkpt')];
+  if (!nodos.length) nodos = [...xml.getElementsByTagName('rtept')];
+  if (!nodos.length) nodos = [...xml.getElementsByTagName('wpt')];
+  const puntos = nodos.map((n) => [parseFloat(n.getAttribute('lat')), parseFloat(n.getAttribute('lon'))]).filter((p) => !isNaN(p[0]) && !isNaN(p[1]));
+  if (puntos.length < 2) return avisar('El GPX no tiene puntos suficientes', true);
+  cambiarPestana('ruta');
+  elegirModo('recta', { fijarVelocidad: false, recalcular: false });
+  $('#chkDesdeActual').checked = false;
+  marcarTipoRuta('paradas');
+  zona = [];
+  paradas = puntos;
+  rutaCambiada();
+  mapa.fitBounds(L.latLngBounds(puntos), { padding: [40, 40] });
+  avisar(`GPX importado: ${puntos.length} puntos`);
+});
+
+// ------------------------------------------------------------ joystick
+let rumboJoystick = null;
+let ultimoRumboEnviado = undefined;
+const teclas = new Set();
+
+async function asegurarPosicion() {
+  if (ultimoEstado && ultimoEstado.posicion) return;
+  const inicio = ubicacionReal || [mapa.getCenter().lat, mapa.getCenter().lng];
+  await api('/api/teletransportar', { lat: inicio[0], lon: inicio[1] });
+  avisar(ubicacionReal ? 'Empiezo desde tu ubicación real' : 'Empiezo desde el centro del mapa');
+  await refrescar();
+}
+
+function fijarRumbo(r) {
+  rumboJoystick = r;
+  $('#joyTxt').textContent = r === null ? 'Quieto' : `Rumbo ${Math.round(r)}° · ${velocidadActual()} km/h`;
+}
+
+async function enviarJoystick() {
+  const conectado = ultimoEstado && ultimoEstado.conectado;
+  if (rumboJoystick === null && (!conectado || ultimoRumboEnviado === null)) return;
+  if (rumboJoystick === null && ultimoEstado.modo !== 'joystick') { ultimoRumboEnviado = null; return; }
+  try {
+    if (rumboJoystick !== null) { await asegurarConexion(); await asegurarPosicion(); }
+    await api('/api/joystick', { rumbo: rumboJoystick, velocidad_kmh: velocidadActual() });
+    ultimoRumboEnviado = rumboJoystick;
+  } catch (e) {
+    fijarRumbo(null);
+    avisar(e.message, true);
+  }
+}
+setInterval(enviarJoystick, 400);
+
+const joy = $('#joy'), perilla = $('#perilla');
+let arrastrando = false;
+function moverPerilla(e) {
+  const r = joy.getBoundingClientRect();
+  let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const max = r.width / 2 - 32, d = Math.hypot(dx, dy);
+  if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+  perilla.style.transform = `translate(${dx}px, ${dy}px)`;
+  fijarRumbo(Math.hypot(dx, dy) < max * 0.3 ? null : (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360);
+}
+joy.addEventListener('pointerdown', (e) => { arrastrando = true; joy.setPointerCapture(e.pointerId); moverPerilla(e); });
+joy.addEventListener('pointermove', (e) => arrastrando && moverPerilla(e));
+['pointerup', 'pointercancel'].forEach((ev) => joy.addEventListener(ev, () => {
+  arrastrando = false; perilla.style.transform = ''; fijarRumbo(null); enviarJoystick();
+}));
+
+const DIRECCIONES = { w: [0, -1], arrowup: [0, -1], s: [0, 1], arrowdown: [0, 1], a: [-1, 0], arrowleft: [-1, 0], d: [1, 0], arrowright: [1, 0] };
+function rumboDeTeclas() {
+  let x = 0, y = 0;
+  teclas.forEach((t) => { x += DIRECCIONES[t][0]; y += DIRECCIONES[t][1]; });
+  return x === 0 && y === 0 ? null : (Math.atan2(x, -y) * 180 / Math.PI + 360) % 360;
+}
+document.addEventListener('keydown', (e) => {
+  const t = e.key.toLowerCase();
+  if (pestana !== 'joy' || !DIRECCIONES[t] || e.target.matches('input, select, textarea')) return;
+  e.preventDefault();
+  if (!teclas.has(t)) { teclas.add(t); fijarRumbo(rumboDeTeclas()); enviarJoystick(); }
+});
+document.addEventListener('keyup', (e) => {
+  const t = e.key.toLowerCase();
+  if (!teclas.delete(t)) return;
+  fijarRumbo(rumboDeTeclas());
+  enviarJoystick();
+});
+
+// ------------------------------------------------------------ restaurar
+$('#btnRestaurar').addEventListener('click', () => intentar(async () => {
+  await api('/api/restaurar', {});
+  marcadorIphone.remove();
+  rastro.setLatLngs([]);
+  avisar('El iPhone vuelve a usar su GPS real');
+  if (ubicacionReal) mapa.flyTo(ubicacionReal, Math.max(mapa.getZoom(), 16));
+  await refrescar();
+}));
+
+$('#btnReintentar').addEventListener('click', () => refrescar());
+
+$('#btnSalir').addEventListener('click', () => intentar(async () => {
+  if (!confirm('¿Cerrar GPS Libre? El iPhone volverá a su GPS real y esta página dejará de funcionar.')) return;
+  await api('/api/salir', {});
+  avisar('GPS Libre cerrado. Ya puedes cerrar esta pestaña.');
+}));
+
+// ------------------------------------------------------------ sondeo del estado
+async function refrescar() {
+  let e;
+  try {
+    e = await api('/api/estado');
+  } catch {
+    pintarPastilla('', 'Sin conexión con el PC');
+    return;   // la banda roja ya avisa; se sigue intentando cada segundo
+  }
+  if (!$('#sinServidor').hidden) {
+    $('#sinServidor').hidden = true;
+    avisar('Reconectado con GPS Libre');
+  }
+  const antes = ultimoEstado;
+  ultimoEstado = e;
+
+  if (e.conectando) pintarPastilla('espera', 'Conectando…');
+  else if (e.conectado) pintarPastilla('ok', 'Conectado');
+  else pintarPastilla('', 'Sin iPhone');
+  $('#btnConectar').textContent = e.conectado ? 'Desconectar' : 'Conectar iPhone';
+  $('#btnConectar').disabled = e.conectando;
+  const d = e.dispositivo || {};
+  $('#disp').textContent = e.conectado ? `${d.nombre} · iOS ${d.ios} · ${d.via}${d.ip ? ' ' + d.ip : ''}` : '';
+  const ipRecordada = e.recordado && e.recordado.ip_wifi;
+  $('#ipIphone').placeholder = ipRecordada ? `Última IP: ${ipRecordada} (vacío = la busco yo)` : 'IP del iPhone (opcional: la busco yo)';
+  pintarLicencia(e.licencia);
+
+  if (!centradoInicial) {
+    // Al abrir: si ya hay una ubicación simulada, ahí; si no, en la ubicación real.
+    centradoInicial = true;
+    if (e.posicion) mapa.setView(e.posicion, 16);
+    buscarUbicacionReal(!e.posicion);
+  }
+
+  if (e.posicion) {
+    marcadorIphone.setLatLng(e.posicion).addTo(mapa);
+    if (e.modo !== 'quieto') {
+      rastro.addLatLng(e.posicion);
+      if ($('#chkSeguir').checked) mapa.panTo(e.posicion, { animate: true });
+    }
+  } else {
+    marcadorIphone.remove();
+  }
+
+  const enRuta = e.modo === 'ruta';
+  $('#btnPausa').disabled = !enRuta;
+  $('#btnDetener').disabled = e.modo === 'quieto';
+  $('#btnPausa').textContent = e.pausado ? 'Reanudar' : 'Pausar';
+  if (e.ruta) {
+    const pct = e.ruta.total_m ? (e.ruta.recorrido_m / e.ruta.total_m) * 100 : 0;
+    $('#barraProgreso').style.width = pct.toFixed(1) + '%';
+    const restante = (e.ruta.total_m - e.ruta.recorrido_m) / (e.velocidad_kmh / 3.6);
+    $('#rutaProgreso').textContent = `${fmtDist(e.ruta.recorrido_m)} de ${fmtDist(e.ruta.total_m)} · faltan ${fmtTiempo(restante)}`
+      + (e.ruta.vueltas ? ` · vuelta ${e.ruta.vueltas + 1}` : '') + (e.pausado ? ' · en pausa' : '')
+      + (e.esperando_calles ? ' · esperando a que carguen más calles' : '');
+  } else if (antes && antes.modo === 'ruta' && e.modo !== 'ruta') {
+    const terminada = e.fin_ruta === 'terminada';
+    $('#barraProgreso').style.width = terminada ? '100%' : '0';
+    $('#rutaProgreso').textContent = terminada ? 'Ruta terminada' : 'Ruta detenida';
+  }
+
+  if (e.error && e.error.ts !== ultimoErrorTs) {
+    ultimoErrorTs = e.error.ts;
+    avisar(e.error.mensaje, true);
+  }
+}
+
+// ------------------------------------------------------------ control desde el iPhone (PIN y código QR)
+function mostrarPuerta() {
+  if (!$('#puerta').hidden) return;
+  $('#puerta').hidden = false;
+  setTimeout(() => $('#pinEntrada').focus(), 50);
+}
+async function entrar(credenciales) {
+  await api('/api/entrar', credenciales);
+  $('#puerta').hidden = true;
+  arrancar();
+}
+$('#btnEntrar').addEventListener('click', () => intentar(() => entrar({ pin: $('#pinEntrada').value.trim() })));
+$('#pinEntrada').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btnEntrar').click(); });
+
+let libreriaQr = null;
+function cargarLibreriaQr() {
+  libreriaQr = libreriaQr || new Promise((ok, falla) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload = ok;
+    s.onerror = () => { libreriaQr = null; falla(new Error('No se pudo cargar el generador de QR (¿sin internet?). Usa la dirección y el PIN.')); };
+    document.head.appendChild(s);
+  });
+  return libreriaQr;
+}
+async function pintarPanelCelular() {
+  const datos = await api('/api/celular');
+  $('#pinCelular').textContent = datos.pin;
+  $('#urlCelular').textContent = !datos.en_red
+    ? 'El programa se abrió con --solo-pc: el celular no puede entrar.'
+    : (datos.direcciones.length ? 'O abre en Safari: ' + datos.direcciones.join('  ·  ') : 'Este PC no está conectado a ninguna red.');
+  const caja = $('#qrCelular');
+  caja.innerHTML = '';
+  if (!datos.enlace_qr) return;
+  await cargarLibreriaQr();
+  new QRCode(caja, { text: datos.enlace_qr, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+}
+$('#panelCelular').addEventListener('toggle', (e) => { if (e.target.open) intentar(pintarPanelCelular); });
+$('#btnNuevoCodigo').addEventListener('click', () => intentar(pintarPanelCelular));
+$('#btnNuevoPin').addEventListener('click', () => intentar(async () => {
+  if (!confirm('Los celulares que ya entraron tendrán que escribir el PIN nuevo. ¿Cambiarlo?')) return;
+  await api('/api/celular/nuevo-pin', {});
+  await pintarPanelCelular();
+  avisar('PIN cambiado');
+}));
+
+// ------------------------------------------------------------ licencia (movimientos gratis y luego cobro)
+let urlCompra = '';
+function pintarPrecios(lic) {
+  urlCompra = lic.url_compra || '';
+  const cont = $('#precios');
+  cont.innerHTML = '';
+  (lic.precios || []).forEach((p) => {
+    const div = document.createElement('div');
+    div.className = 'precio' + (p.destacado ? ' destacado' : '');
+    if (p.url) { div.style.cursor = 'pointer'; div.title = 'Comprar ' + p.nombre; div.onclick = () => window.open(p.url, '_blank', 'noopener'); }
+    div.innerHTML = `<span class="etq">${p.nombre}${p.destacado ? '<small>El más elegido</small>' : ''}</span><span class="val">${p.precio}</span>`;
+    cont.appendChild(div);
+  });
+  const desc = $('#muroDescuento');
+  desc.textContent = lic.descuento ? '🎁 ' + lic.descuento : '';
+  desc.hidden = !lic.descuento;
+}
+async function abrirMuro(mensaje) {
+  $('#muroTexto').textContent = mensaje || 'Sigue moviendo tu iPhone donde quieras, sin límite.';
+  $('#muro').hidden = false;
+  try { pintarPrecios(await api('/api/licencia')); } catch {}
+}
+$('#btnCerrarMuro').addEventListener('click', () => ($('#muro').hidden = true));
+$('#btnComprar').addEventListener('click', () => {
+  if (urlCompra) window.open(urlCompra, '_blank');
+  else avisar('El botón de compra se activa cuando conectes tu pasarela de pago (Lemon Squeezy/Paddle).', true);
+});
+$('#btnActivar').addEventListener('click', () => intentar(async () => {
+  const clave = $('#claveLicencia').value.trim();
+  if (!clave) throw new Error('Pega tu clave de licencia.');
+  await api('/api/licencia/activar', { clave });
+  $('#muro').hidden = true;
+  $('#claveLicencia').value = '';
+  avisar('¡Licencia activada! Ya puedes moverte sin límite.');
+  await refrescar();
+}));
+$('#contadorGratis').addEventListener('click', () => abrirMuro());
+
+function pintarLicencia(lic) {
+  const c = $('#contadorGratis');
+  if (!lic || lic.licenciado) { c.hidden = true; return; }
+  c.hidden = false;
+  c.style.cursor = 'pointer';
+  c.innerHTML = lic.restantes > 0
+    ? `Prueba gratis: te quedan <b>${lic.restantes}</b> teletransporte${lic.restantes === 1 ? '' : 's'}`
+    : 'Teletransportes gratis agotados · <b>Activar</b>';
+}
+
+// ------------------------------------------------------------ bienvenida (pasos fáciles)
+let esLocal = true;   // si la página se abre desde el propio PC (no desde el celular)
+function mostrarBienvenida() { $('#bienvenida').hidden = false; }
+function cerrarBienvenida() {
+  $('#bienvenida').hidden = true;
+  try { localStorage.setItem('gps_bienvenida_vista', '1'); } catch {}
+}
+$('#btnEmpezar').addEventListener('click', cerrarBienvenida);
+$('#btnComo').addEventListener('click', mostrarBienvenida);
+$('#btnBienvenidaDemo').addEventListener('click', () => intentar(async () => {
+  await api('/api/conectar', { demo: true });
+  cerrarBienvenida();
+  avisar('Modo demo: prueba todo sin mover ningún iPhone. Toca el mapa.');
+  await refrescar();
+}));
+
+// ------------------------------------------------------------ arranque
+let arrancado = false;
+function arrancar() {
+  if (arrancado) return;
+  arrancado = true;
+  cargarGuardados();
+  recuperarBorrador();
+  // La primera vez (solo en el PC) se enseñan los pasos; el celular ya entró con PIN y va directo.
+  if (esLocal && !leerLocal('gps_bienvenida_vista', false)) mostrarBienvenida();
+  refrescar();
+  setInterval(refrescar, 1000);
+}
+
+elegirColor(colorRuta);
+elegirModo(modoMovimiento, { recalcular: false });
+cambiarPestana('tele');
+pintarFavoritos();
+pintarRutasGuardadas();
+(async () => {
+  // El código de un solo uso del QR llega tras «#» (no viaja al servidor en la URL); se borra enseguida.
+  const codigo = new URLSearchParams(location.hash.slice(1)).get('codigo');
+  if (location.hash) history.replaceState(null, '', location.pathname);
+  let sesion = { local: true, autorizado: true };
+  try { sesion = await api('/api/sesion'); } catch {}
+  esLocal = sesion.local;
+  $('#panelCelular').hidden = !sesion.local;
+  $('#btnSalir').hidden = !sesion.local;
+  if (sesion.autorizado) return arrancar();
+  if (codigo) {
+    try { return await entrar({ codigo }); } catch (e) { avisar(e.message, true); }
+  }
+  mostrarPuerta();
+})();
+</script>
+
+<script>
+// ------------------------------------------------------------ idiomas de la app
+// Traductor por texto: recorre la pantalla y cambia los textos en español al idioma elegido; un
+// MutationObserver vuelve a traducir lo que la app dibuja después (estado, contador, avisos, etc.).
+(function () {
+  const IDX = { en: 0, fr: 1, pt: 2, zh: 3, ja: 4, ko: 5 };
+  const D = {
+    "Sin iPhone": ["No iPhone", "Aucun iPhone", "Sem iPhone", "无 iPhone", "iPhone なし", "iPhone 없음"],
+    "Probar sin iPhone": ["Try without iPhone", "Essayer sans iPhone", "Testar sem iPhone", "无需 iPhone 试用", "iPhone なしで試す", "iPhone 없이 체험"],
+    "Conectar iPhone": ["Connect iPhone", "Connecter l’iPhone", "Conectar iPhone", "连接 iPhone", "iPhone を接続", "iPhone 연결"],
+    "Desconectar": ["Disconnect", "Déconnecter", "Desconectar", "断开连接", "切断", "연결 해제"],
+    "Conectando…": ["Connecting…", "Connexion…", "Conectando…", "连接中…", "接続中…", "연결 중…"],
+    "Conectado": ["Connected", "Connecté", "Conectado", "已连接", "接続済み", "연결됨"],
+    "Sin conexión con el PC": ["No connection to the PC", "Pas de connexion au PC", "Sem conexão com o PC", "未连接到电脑", "PC に未接続", "PC에 연결 안 됨"],
+    "Servidor apagado": ["Server off", "Serveur éteint", "Servidor desligado", "服务器已关闭", "サーバー停止", "서버 꺼짐"],
+    "Cable": ["Cable", "Câble", "Cabo", "数据线", "ケーブル", "케이블"],
+    "Teletransportar": ["Teleport", "Téléporter", "Teletransportar", "瞬移", "テレポート", "순간이동"],
+    "Ruta": ["Route", "Itinéraire", "Rota", "路线", "ルート", "경로"],
+    "🚶 A pie": ["🚶 Walking", "🚶 À pied", "🚶 A pé", "🚶 步行", "🚶 徒歩", "🚶 도보"],
+    "🏃 Corriendo": ["🏃 Running", "🏃 En courant", "🏃 Correndo", "🏃 跑步", "🏃 ランニング", "🏃 달리기"],
+    "🚲 Bici": ["🚲 Bike", "🚲 Vélo", "🚲 Bike", "🚲 骑行", "🚲 自転車", "🚲 자전거"],
+    "🚗 Carro": ["🚗 Car", "🚗 Voiture", "🚗 Carro", "🚗 驾车", "🚗 車", "🚗 자동차"],
+    "📏 Línea recta": ["📏 Straight line", "📏 Ligne droite", "📏 Linha reta", "📏 直线", "📏 直線", "📏 직선"],
+    "Velocidad km/h": ["Speed km/h", "Vitesse km/h", "Velocidade km/h", "速度 km/h", "速度 km/h", "속도 km/h"],
+    "Haz clic en el mapa o busca un lugar, y mueve el iPhone a ese punto.": ["Tap the map or search a place, and move the iPhone there.", "Touchez la carte ou cherchez un lieu, et déplacez l’iPhone là.", "Toque no mapa ou busque um lugar e mova o iPhone para lá.", "点击地图或搜索地点，把 iPhone 移到那里。", "地図をタップするか場所を検索して、iPhone をそこへ移動。", "지도를 탭하거나 장소를 검색해 iPhone을 그곳으로 옮기세요."],
+    "Sin punto elegido": ["No point chosen", "Aucun point choisi", "Nenhum ponto escolhido", "未选择位置", "地点未選択", "지점 미선택"],
+    "Mover iPhone aquí": ["Move iPhone here", "Déplacer l’iPhone ici", "Mover iPhone aqui", "把 iPhone 移到这里", "iPhone をここへ", "여기로 iPhone 이동"],
+    "Favoritos": ["Favorites", "Favoris", "Favoritos", "收藏", "お気に入り", "즐겨찾기"],
+    "📍 Por paradas": ["📍 By stops", "📍 Par arrêts", "📍 Por paradas", "📍 按停靠点", "📍 経由地で", "📍 경유지로"],
+    "🗺️ Recorrer una zona": ["🗺️ Cover an area", "🗺️ Parcourir une zone", "🗺️ Percorrer uma área", "🗺️ 覆盖一片区域", "🗺️ エリアを巡る", "🗺️ 구역 돌기"],
+    "Qué tanto recorrer": ["How much to cover", "Quelle part parcourir", "Quanto percorrer", "覆盖多少", "どれだけ巡る", "얼마나 돌지"],
+    "〰️ Zigzag rápido": ["〰️ Quick zigzag", "〰️ Zigzag rapide", "〰️ Ziguezague rápido", "〰️ 快速之字形", "〰️ ジグザグ（速い）", "〰️ 빠른 지그재그"],
+    "25 % de las calles": ["25% of streets", "25% des rues", "25% das ruas", "25% 的街道", "街路の25%", "도로의 25%"],
+    "Todas las calles": ["All streets", "Toutes les rues", "Todas as ruas", "所有街道", "すべての街路", "모든 도로"],
+    "Calcular recorrido": ["Calculate route", "Calculer le trajet", "Calcular percurso", "计算路线", "経路を計算", "경로 계산"],
+    "Separación entre pasadas": ["Spacing between passes", "Espacement entre passages", "Espaço entre passagens", "每趟间隔", "パスの間隔", "패스 간격"],
+    "Sin destino": ["No destination", "Aucune destination", "Sem destino", "无目的地", "目的地なし", "목적지 없음"],
+    "Iniciar ruta": ["Start route", "Démarrer", "Iniciar rota", "开始路线", "ルート開始", "경로 시작"],
+    "Pausar": ["Pause", "Pause", "Pausar", "暂停", "一時停止", "일시정지"],
+    "Reanudar": ["Resume", "Reprendre", "Retomar", "继续", "再開", "계속"],
+    "Detener": ["Stop", "Arrêter", "Parar", "停止", "停止", "정지"],
+    "🗑️ Eliminar ruta y empezar otra": ["🗑️ Delete route and start over", "🗑️ Supprimer et recommencer", "🗑️ Excluir rota e recomeçar", "🗑️ 删除路线并重新开始", "🗑️ ルートを削除して最初から", "🗑️ 경로 삭제하고 새로"],
+    "Guardar ruta": ["Save route", "Enregistrer", "Salvar rota", "保存路线", "ルートを保存", "경로 저장"],
+    "Salir desde el iPhone": ["Start from the iPhone", "Partir de l’iPhone", "Sair do iPhone", "从 iPhone 出发", "iPhone から出発", "iPhone에서 출발"],
+    "Movimiento natural": ["Natural movement", "Mouvement naturel", "Movimento natural", "自然移动", "自然な動き", "자연스러운 이동"],
+    "Repetir": ["Repeat", "Répéter", "Repetir", "重复", "繰り返し", "반복"],
+    "Ida y vuelta": ["Round trip", "Aller-retour", "Ida e volta", "往返", "往復", "왕복"],
+    "Quitar última": ["Remove last", "Retirer le dernier", "Remover última", "移除最后一个", "最後を削除", "마지막 제거"],
+    "Importar GPX": ["Import GPX", "Importer GPX", "Importar GPX", "导入 GPX", "GPX を読み込む", "GPX 가져오기"],
+    "Exportar GPX": ["Export GPX", "Exporter GPX", "Exportar GPX", "导出 GPX", "GPX を書き出す", "GPX 내보내기"],
+    "Mis rutas": ["My routes", "Mes itinéraires", "Minhas rotas", "我的路线", "マイルート", "내 경로"],
+    "Quieto": ["Still", "Immobile", "Parado", "静止", "静止", "정지"],
+    "Centrar el mapa en el iPhone mientras se mueve": ["Center the map on the iPhone as it moves", "Centrer la carte sur l’iPhone pendant le mouvement", "Centralizar o mapa no iPhone ao mover", "移动时把地图居中到 iPhone", "移動中に地図を iPhone に合わせる", "이동 중 지도를 iPhone에 맞추기"],
+    "📱 Controlar desde el iPhone": ["📱 Control from your phone", "📱 Contrôler depuis le téléphone", "📱 Controlar pelo celular", "📱 用手机操控", "📱 スマホから操作", "📱 휴대폰으로 제어"],
+    "Nuevo código QR": ["New QR code", "Nouveau QR code", "Novo código QR", "新二维码", "新しい QR コード", "새 QR 코드"],
+    "Cambiar PIN": ["Change PIN", "Changer le PIN", "Alterar PIN", "更改 PIN", "PIN を変更", "PIN 변경"],
+    "Restaurar GPS real del iPhone": ["Restore the iPhone’s real GPS", "Restaurer le vrai GPS de l’iPhone", "Restaurar o GPS real do iPhone", "恢复 iPhone 的真实 GPS", "iPhone の実際の GPS に戻す", "iPhone의 실제 GPS로 복원"],
+    "Cerrar GPS Libre": ["Close GPS Libre", "Fermer GPS Libre", "Fechar GPS Libre", "关闭 GPS Libre", "GPS Libre を終了", "GPS Libre 닫기"],
+    "GPS Libre no está abierto en el PC. Ábrelo y esta página se reconecta sola.": ["GPS Libre isn’t open on the PC. Open it and this page reconnects on its own.", "GPS Libre n’est pas ouvert sur le PC. Ouvrez-le et cette page se reconnecte seule.", "GPS Libre não está aberto no PC. Abra-o e esta página reconecta sozinha.", "电脑上未打开 GPS Libre。打开它，此页面会自动重连。", "PC で GPS Libre が開いていません。開けば自動で再接続します。", "PC에서 GPS Libre가 열려 있지 않습니다. 열면 자동으로 다시 연결됩니다."],
+    "Reintentar": ["Retry", "Réessayer", "Tentar de novo", "重试", "再試行", "다시 시도"],
+    "Pon tu iPhone en cualquier lugar del mundo, gratis.": ["Put your iPhone anywhere in the world, free.", "Placez votre iPhone n’importe où dans le monde, gratuitement.", "Coloque seu iPhone em qualquer lugar do mundo, grátis.", "把你的 iPhone 放到世界任何地方，免费。", "iPhone を世界のどこへでも、無料で。", "iPhone을 전 세계 어디로든, 무료로."],
+    "Conecta el iPhone con el cable": ["Connect the iPhone with the cable", "Connectez l’iPhone avec le câble", "Conecte o iPhone com o cabo", "用数据线连接 iPhone", "ケーブルで iPhone を接続", "케이블로 iPhone 연결"],
+    "Activa el «Modo desarrollador» (una sola vez)": ["Turn on Developer Mode (once)", "Activez le « Mode développeur » (une fois)", "Ative o «Modo desenvolvedor» (uma vez)", "开启「开发者模式」（一次）", "「デベロッパモード」をオン（一度だけ）", "「개발자 모드」켜기 (한 번)"],
+    "Pulsa «Conectar» y toca el mapa": ["Tap Connect and touch the map", "Touchez « Connecter » et la carte", "Toque em «Conectar» e no mapa", "点「连接」并点击地图", "「接続」を押して地図をタップ", "「연결」을 누르고 지도를 탭"],
+    "Empezar": ["Start", "Commencer", "Começar", "开始", "はじめる", "시작"],
+    "¿Aún no tienes el iPhone a mano?": ["Don’t have the iPhone handy?", "Pas d’iPhone sous la main ?", "Ainda não tem o iPhone à mão?", "手边还没有 iPhone？", "iPhone が手元にない？", "iPhone이 아직 없나요?"],
+    "Míralo en modo demo": ["See it in demo mode", "Voir en mode démo", "Ver no modo demo", "用演示模式看看", "デモモードで見る", "데모 모드로 보기"],
+    "En el iPhone: Ajustes → Privacidad y seguridad → Modo desarrollador. Si no lo ves, pulsa «Conectar» y el programa te lo muestra. El iPhone se reinicia.": ["On the iPhone: Settings → Privacy & Security → Developer Mode. If you don’t see it, tap Connect and the app shows you. The iPhone restarts.", "Sur l’iPhone : Réglages → Confidentialité et sécurité → Mode développeur. Si absent, touchez « Connecter » et l’app vous montre. L’iPhone redémarre.", "No iPhone: Ajustes → Privacidade e Segurança → Modo desenvolvedor. Se não aparecer, toque em «Conectar» e o app mostra. O iPhone reinicia.", "在 iPhone：设置 → 隐私与安全 → 开发者模式。若看不到，点「连接」，应用会指引。iPhone 会重启。", "iPhone で：設定 → プライバシーとセキュリティ → デベロッパモード。見当たらなければ「接続」を押すと案内します。iPhone は再起動します。", "iPhone에서: 설정 → 개인정보 보호 및 보안 → 개발자 모드. 보이지 않으면 「연결」을 누르면 앱이 안내합니다. iPhone이 재시작됩니다."],
+    "Tu iPhone «aparece» donde toques. También puedes hacer rutas o moverte con el joystick.": ["Your iPhone “appears” wherever you tap. You can also make routes or move with the joystick.", "Votre iPhone « apparaît » où vous touchez. Vous pouvez aussi créer des itinéraires ou bouger au joystick.", "Seu iPhone “aparece” onde você tocar. Você também pode fazer rotas ou usar o joystick.", "点哪里，iPhone 就「出现」在哪里。也可做路线或用摇杆移动。", "タップした場所に iPhone が「出現」。ルート作成やジョイスティック移動も可能。", "탭한 곳에 iPhone이 “나타납니다”. 경로 만들기나 조이스틱 이동도 가능."],
+    "🔒 No movemos tu iPhone hasta que tú toques el mapa. Para volver a tu GPS real, un botón lo restaura.": ["🔒 We don’t move your iPhone until you tap the map. One button restores your real GPS.", "🔒 Nous ne déplaçons pas votre iPhone tant que vous ne touchez pas la carte. Un bouton restaure votre vrai GPS.", "🔒 Não movemos seu iPhone até você tocar no mapa. Um botão restaura seu GPS real.", "🔒 你不点地图，我们就不移动你的 iPhone。一个按钮即可恢复真实 GPS。", "🔒 地図をタップするまで iPhone は動きません。ボタン一つで実際の GPS に戻せます。", "🔒 지도를 탭하기 전에는 iPhone을 옮기지 않습니다. 버튼 하나로 실제 GPS로 복원됩니다."],
+    "Activa GPS Libre": ["Activate GPS Libre", "Activer GPS Libre", "Ative o GPS Libre", "激活 GPS Libre", "GPS Libre を有効化", "GPS Libre 활성화"],
+    "Sigue moviendo tu iPhone donde quieras, sin límite.": ["Keep moving your iPhone anywhere, no limits.", "Continuez à déplacer votre iPhone partout, sans limite.", "Continue movendo seu iPhone onde quiser, sem limite.", "随心把 iPhone 移到任何地方，无限制。", "iPhone を好きな場所へ、無制限に。", "iPhone을 어디로든 무제한으로 계속 옮기세요."],
+    "Comprar ahora": ["Buy now", "Acheter", "Comprar agora", "立即购买", "今すぐ購入", "지금 구매"],
+    "¿Ya tienes una clave? Pégala aquí:": ["Already have a key? Paste it here:", "Vous avez déjà une clé ? Collez-la ici :", "Já tem uma chave? Cole aqui:", "已有密钥？粘贴到这里：", "キーをお持ちですか？ここに貼り付け：", "이미 키가 있나요? 여기에 붙여넣기:"],
+    "Activar": ["Activate", "Activer", "Ativar", "激活", "有効化", "활성화"],
+    "Ahora no": ["Not now", "Plus tard", "Agora não", "暂不", "あとで", "나중에"],
+    "Entrar": ["Enter", "Entrer", "Entrar", "进入", "入る", "입장"],
+    "Escribe el PIN que aparece en tu PC, en GPS Libre → «📱 Controlar desde el iPhone».": ["Type the PIN shown on your PC, in GPS Libre → «📱 Control from your phone».", "Saisissez le PIN affiché sur votre PC, dans GPS Libre → «📱 Contrôler depuis le téléphone ».", "Digite o PIN que aparece no seu PC, em GPS Libre → «📱 Controlar pelo celular».", "输入电脑上 GPS Libre → 「📱 用手机操控」中显示的 PIN。", "PC の GPS Libre → 「📱 スマホから操作」に表示された PIN を入力。", "PC의 GPS Libre → 「📱 휴대폰으로 제어」에 표시된 PIN을 입력하세요."],
+    "Con el iPhone en la misma Wi‑Fi que este PC, escanea el código con la cámara. Para dejarlo como app: en Safari, Compartir → «Agregar a pantalla de inicio».": ["With the iPhone on the same Wi‑Fi as this PC, scan the code with the camera. To keep it as an app: in Safari, Share → «Add to Home Screen».", "Avec l’iPhone sur le même Wi‑Fi que ce PC, scannez le code avec l’appareil photo. Pour en faire une app : dans Safari, Partager → « Sur l’écran d’accueil ».", "Com o iPhone no mesmo Wi‑Fi deste PC, escaneie o código com a câmera. Para deixar como app: no Safari, Compartilhar → «Adicionar à Tela de Início».", "让 iPhone 和电脑连同一 Wi‑Fi，用相机扫码。想当作 App：在 Safari，分享 →「添加到主屏幕」。", "iPhone をこの PC と同じ Wi‑Fi にして、カメラでコードを読み取ります。アプリ化：Safari の共有 →「ホーム画面に追加」。", "iPhone을 이 PC와 같은 Wi‑Fi에 두고 카메라로 코드를 스캔하세요. 앱으로 두려면 Safari에서 공유 → 「홈 화면에 추가」."],
+    "Buscar lugar o pegar «10.3910, -75.4794»": ["Search a place or paste «10.3910, -75.4794»", "Chercher un lieu ou coller «10.3910, -75.4794»", "Buscar lugar ou colar «10.3910, -75.4794»", "搜索地点或粘贴「10.3910, -75.4794」", "場所を検索、または「10.3910, -75.4794」を貼り付け", "장소 검색 또는 «10.3910, -75.4794» 붙여넣기"],
+    "IP del iPhone (opcional: la busco yo)": ["iPhone IP (optional: I’ll find it)", "IP de l’iPhone (facultatif : je la trouve)", "IP do iPhone (opcional: eu procuro)", "iPhone 的 IP（可选：我来找）", "iPhone の IP（任意：自動検索）", "iPhone IP (선택: 자동 검색)"],
+    "¿Cómo funciona?": ["How it works", "Comment ça marche", "Como funciona", "使用方法", "使い方", "사용 방법"],
+    "Guardar en favoritos": ["Save to favorites", "Ajouter aux favoris", "Salvar nos favoritos", "加入收藏", "お気に入りに保存", "즐겨찾기에 저장"],
+    "PIN cambiado": ["PIN changed", "PIN changé", "PIN alterado", "PIN 已更改", "PIN を変更しました", "PIN이 변경되었습니다"],
+    "¡Licencia activada! Ya puedes moverte sin límite.": ["License activated! You can now move without limits.", "Licence activée ! Vous pouvez bouger sans limite.", "Licença ativada! Agora você pode mover sem limite.", "许可已激活！现在可无限移动。", "ライセンスを有効化しました！無制限に移動できます。", "라이선스가 활성화되었습니다! 이제 무제한 이동 가능."],
+  };
+  const DHTML = {
+    biev1: ["Unlock it and tap <b>“Trust”</b>. Only the first time; then it works over Wi‑Fi.", "Déverrouillez-le et touchez <b>« Se fier »</b>. Seulement la première fois ; ensuite ça marche en Wi‑Fi.", "Desbloqueie e toque em <b>“Confiar”</b>. Só na primeira vez; depois funciona por Wi‑Fi.", "解锁并点击<b>「信任」</b>。仅第一次；之后走 Wi‑Fi。", "ロックを解除して<b>「信頼」</b>をタップ。最初だけ。以降は Wi‑Fi。", "잠금을 해제하고 <b>「신뢰」</b>를 탭. 처음 한 번만; 이후엔 Wi‑Fi."],
+    a_paradas: ["<b>One tap</b> on the map sets the destination and the iPhone starts where it is. Each extra tap adds a stop. <b>Drag</b> a point to move it or <b>tap it</b> to remove it.", "<b>Un appui</b> sur la carte définit la destination et l’iPhone part d’où il est. Chaque appui ajoute un arrêt. <b>Glissez</b> un point pour le déplacer ou <b>touchez-le</b> pour l’enlever.", "<b>Um toque</b> no mapa define o destino e o iPhone sai de onde está. Cada toque adiciona uma parada. <b>Arraste</b> um ponto para mover ou <b>toque</b> para remover.", "在地图上<b>点一下</b>设定目的地，iPhone 从当前位置出发。多点一下就加一个停靠点。<b>拖动</b>可移动，<b>点它</b>可删除。", "地図を<b>1回タップ</b>で目的地を設定、iPhone は現在地から出発。追加のタップで経由地が増えます。点を<b>ドラッグ</b>で移動、<b>タップ</b>で削除。", "지도를 <b>한 번 탭</b>하면 목적지가 정해지고 iPhone은 현재 위치에서 출발합니다. 탭할 때마다 경유지가 추가됩니다. 점을 <b>드래그</b>해 옮기거나 <b>탭</b>해 제거하세요."],
+    a_zona: ["<b>Tap the map</b> to mark the area’s corners (at least 3), e.g. the whole north of the city. Drag a corner to adjust it or tap it to remove it.", "<b>Touchez la carte</b> pour marquer les coins de la zone (au moins 3), par ex. tout le nord de la ville. Glissez un coin pour l’ajuster ou touchez-le pour l’enlever.", "<b>Toque no mapa</b> para marcar os cantos da área (mín. 3), por ex. toda a zona norte. Arraste um canto para ajustar ou toque para remover.", "<b>点击地图</b>标出区域的角（至少 3 个），例如整个城北。拖动角可调整，点它可删除。", "<b>地図をタップ</b>してエリアの角（3つ以上）を設定、例：街の北側全体。角を<b>ドラッグ</b>で調整、タップで削除。", "<b>지도를 탭</b>해 구역의 모서리(최소 3개)를 표시하세요, 예: 도시 북부 전체. 모서리를 드래그해 조정하거나 탭해 제거하세요."],
+    a_joy: ["Drag the knob or use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows. Release to stop.", "Glissez le joystick ou utilisez <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / flèches. Relâchez pour vous arrêter.", "Arraste o direcional ou use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / setas. Solte para parar.", "拖动摇杆或用 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / 方向键。松开即停止。", "スティックをドラッグ、または <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / 矢印キー。離すと停止。", "스틱을 드래그하거나 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / 화살표를 사용하세요. 놓으면 멈춥니다."],
+  };
+  // Contador (tiene un número dentro), traducido aparte.
+  const CONT = {
+    en: { q: "Free trial: <b>{n}</b> teleport{s} left", a: "Free teleports used up · <b>Activate</b>", s: "s" },
+    fr: { q: "Essai gratuit : <b>{n}</b> téléportation{s} restante{s}", a: "Téléportations gratuites épuisées · <b>Activer</b>", s: "s" },
+    pt: { q: "Teste grátis: restam <b>{n}</b> teletransporte{s}", a: "Teletransportes grátis esgotados · <b>Ativar</b>", s: "s" },
+    zh: { q: "免费试用：还剩 <b>{n}</b> 次瞬移", a: "免费瞬移已用完 · <b>激活</b>", s: "" },
+    ja: { q: "無料お試し：あと <b>{n}</b> 回のテレポート", a: "無料テレポートを使い切りました · <b>有効化</b>", s: "" },
+    ko: { q: "무료 체험: 순간이동 <b>{n}</b>회 남음", a: "무료 순간이동 소진 · <b>활성화</b>", s: "" },
+  };
+
+  const ORIG = new WeakMap();
+  let idioma = "es", observador = null;
+
+  function trad(clave, l) {
+    if (l === "es") return clave;
+    const a = D[clave];
+    return a ? a[IDX[l]] : clave;
+  }
+  function nodoTexto(n, l) {
+    let o = ORIG.get(n);
+    if (o === undefined) { o = n.nodeValue; ORIG.set(n, o); }
+    const c = o.trim();
+    if (!c) return;
+    const nuevo = o.replace(c, trad(c, l));
+    if (n.nodeValue !== nuevo) n.nodeValue = nuevo;
+  }
+  function saltar(p) {
+    const t = p.nodeName;
+    return t === "SCRIPT" || t === "STYLE" || t === "OPTION" || p.closest('[translate="no"],[data-ihtml]');
+  }
+  function traducir(l) {
+    if (observador) observador.disconnect();
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) { return !n.parentNode || saltar(n.parentNode) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; },
+    });
+    let n; while ((n = w.nextNode())) nodoTexto(n, l);
+    document.querySelectorAll("[placeholder]").forEach((e) => {
+      let o = e.getAttribute("data-oph"); if (o === null) { o = e.getAttribute("placeholder") || ""; e.setAttribute("data-oph", o); }
+      if (D[o.trim()] || l === "es") e.setAttribute("placeholder", trad(o.trim(), l));
+    });
+    document.querySelectorAll("[title]").forEach((e) => {
+      let o = e.getAttribute("data-oti"); if (o === null) { o = e.getAttribute("title") || ""; e.setAttribute("data-oti", o); }
+      if (D[o.trim()] || l === "es") e.setAttribute("title", trad(o.trim(), l));
+    });
+    document.querySelectorAll("[data-ihtml]").forEach((e) => {
+      const a = DHTML[e.getAttribute("data-ihtml")]; if (!a) return;
+      if (e.dataset.oh === undefined) e.dataset.oh = e.innerHTML;
+      e.innerHTML = l === "es" ? e.dataset.oh : (a[IDX[l]] || e.dataset.oh);
+    });
+    const cg = document.getElementById("contadorGratis");
+    if (cg && !cg.hidden && l !== "es" && CONT[l]) {
+      const num = (cg.textContent.match(/\d+/) || [])[0];
+      const dic = CONT[l];
+      if (num === undefined || /agotad/i.test(cg.textContent)) cg.innerHTML = dic.a;
+      else cg.innerHTML = dic.q.replace("{n}", num).replace(/\{s\}/g, num === "1" ? "" : dic.s);
+    }
+    if (observador) observador.observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
+
+  let pend = null;
+  function reprogramar() { if (pend) return; pend = requestAnimationFrame(() => { pend = null; if (idioma !== "es") traducir(idioma); }); }
+  observador = new MutationObserver(reprogramar);
+
+  function fijar(l) {
+    idioma = IDX[l] === undefined ? "es" : l;
+    document.documentElement.lang = idioma;
+    try { localStorage.setItem("gps_idioma_app", idioma); } catch (e) {}
+    const sel = document.getElementById("idiomaApp"); if (sel) sel.value = idioma;
+    traducir(idioma);
+  }
+
+  let inicial = "es";
+  try { inicial = localStorage.getItem("gps_idioma_app") || (navigator.language || "es").slice(0, 2).toLowerCase(); } catch (e) {}
+  if (IDX[inicial] === undefined) inicial = "es";
+  const sel = document.getElementById("idiomaApp");
+  if (sel) sel.addEventListener("change", () => fijar(sel.value));
+  fijar(inicial);
+})();
+</script>
+</body>
+</html>

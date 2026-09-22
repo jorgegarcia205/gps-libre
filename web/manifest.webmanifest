@@ -1,0 +1,12 @@
+{
+  "name": "GPS Libre",
+  "short_name": "GPS Libre",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f2a4a",
+  "theme_color": "#0f2a4a",
+  "icons": [
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icono.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

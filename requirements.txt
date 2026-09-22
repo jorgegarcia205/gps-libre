@@ -1,0 +1,17 @@
+# GPS Libre — dependencias de la app (servidor.py)
+# Python 3.11 en Windows x64.  Instalar con:  pip install -r requirements.txt
+
+# --- iOS: conexión con el iPhone (USB + túnel Wi‑Fi) ---
+# Se fija < 12 porque TunelWifi (en servidor.py) usa un detalle interno de esta rama.
+pymobiledevice3>=11.12,<12
+
+# --- Servidor web + validación ---
+fastapi
+uvicorn
+pydantic
+
+# --- Utilidades ---
+requests           # descargas/consultas HTTP y validación de licencias Lemon Squeezy
+ifaddr             # enumerar interfaces de red (detectar la Wi‑Fi del iPhone)
+packaging          # comparar versiones de iOS
+cryptography       # verificación de licencias firmadas (Ed25519); también dep de pymobiledevice3

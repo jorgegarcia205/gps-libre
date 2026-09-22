@@ -1,0 +1,40 @@
+# ==========================================================
+#  SECRETOS — NUNCA subir
+# ==========================================================
+# Llave privada de licencias (firma Ed25519). Solo el dueño la tiene.
+empaquetar/licencia_privada.pem
+*.pem
+*.key
+.env
+*.pfx
+*.p12
+
+# ==========================================================
+#  Artefactos de build (se regeneran con construir.ps1)
+# ==========================================================
+empaquetar/dist/
+empaquetar/build/
+empaquetar/salida/
+empaquetar/*.log
+dll/                     # el DLL de OpenSSL se copia desde Python en cada build
+
+# ==========================================================
+#  Datos de runtime / personales (se generan al usar la app)
+# ==========================================================
+config.json              # PIN de control remoto + hashes de sesión
+guardados.json           # rutas y favoritos del usuario
+iphone_recordado.json    # UDID / IP / modelo del iPhone
+licencia.json            # estado de licencia local
+
+# ==========================================================
+#  Python / editores / SO
+# ==========================================================
+__pycache__/
+*.pyc
+.venv/
+venv/
+.claude/
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
