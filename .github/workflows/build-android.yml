@@ -24,11 +24,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Preparar el SDK de Android
-        uses: android-actions/setup-android@v3
-
-      - name: Instalar plataforma y build-tools
-        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+      - name: Aceptar licencias e instalar SDK de Android
+        # Usa el SDK preinstalado del runner y acepta todas las licencias sin prompt interactivo.
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Preparar Gradle
         uses: gradle/actions/setup-gradle@v4
