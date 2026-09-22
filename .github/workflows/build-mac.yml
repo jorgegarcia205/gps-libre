@@ -1,0 +1,62 @@
+name: Build (macOS)
+
+# Compila «GPS Libre.app» en un runner de macOS y la empaqueta en un .dmg.
+# Sin firma/notarización (beta): la 1ª vez el usuario abre con clic derecho -> Abrir.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Generar icono .icns desde el PNG
+        run: |
+          set -e
+          mkdir -p icon.iconset
+          sips -z 16 16     web/icono-512.png --out icon.iconset/icon_16x16.png
+          sips -z 32 32     web/icono-512.png --out icon.iconset/icon_16x16@2x.png
+          sips -z 32 32     web/icono-512.png --out icon.iconset/icon_32x32.png
+          sips -z 64 64     web/icono-512.png --out icon.iconset/icon_32x32@2x.png
+          sips -z 128 128   web/icono-512.png --out icon.iconset/icon_128x128.png
+          sips -z 256 256   web/icono-512.png --out icon.iconset/icon_128x128@2x.png
+          sips -z 256 256   web/icono-512.png --out icon.iconset/icon_256x256.png
+          sips -z 512 512   web/icono-512.png --out icon.iconset/icon_256x256@2x.png
+          sips -z 512 512   web/icono-512.png --out icon.iconset/icon_512x512.png
+          sips -z 1024 1024 web/icono-512.png --out icon.iconset/icon_512x512@2x.png
+          iconutil -c icns icon.iconset -o empaquetar/gpslibre.icns
+
+      - name: Construir la .app con PyInstaller
+        run: python -m PyInstaller --noconfirm --clean --log-level WARN --distpath empaquetar/dist --workpath empaquetar/build empaquetar/gpslibre-mac.spec
+
+      - name: Comprobar la .app
+        run: |
+          if [ -d "empaquetar/dist/GPS Libre.app" ]; then echo "OK: GPS Libre.app generada"; else echo "No se generó la .app" && exit 1; fi
+
+      - name: Empaquetar .dmg
+        run: |
+          mkdir -p empaquetar/salida
+          hdiutil create -volname "GPS Libre" -srcfolder "empaquetar/dist/GPS Libre.app" -ov -format UDZO "empaquetar/salida/GPSLibre-mac.dmg"
+
+      - name: Subir el .dmg como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: GPSLibre-mac
+          path: empaquetar/salida/GPSLibre-mac.dmg
+          if-no-files-found: error

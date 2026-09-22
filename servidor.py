@@ -50,7 +50,14 @@ CONGELADO = getattr(sys, "frozen", False)  # ejecutable generado con PyInstaller
 # web/ va junto al código (dentro del ejecutable si está empaquetado); los datos del usuario, en
 # %LOCALAPPDATA%\GPSLibre cuando está instalado, porque Archivos de programa no se puede escribir.
 RECURSOS = Path(getattr(sys, "_MEIPASS", RAIZ))
-DATOS = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "GPSLibre" if CONGELADO else RAIZ
+if not CONGELADO:
+    DATOS = RAIZ
+elif sys.platform == "darwin":
+    DATOS = Path.home() / "Library" / "Application Support" / "GPSLibre"
+elif sys.platform == "win32":
+    DATOS = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "GPSLibre"
+else:
+    DATOS = Path.home() / ".gpslibre"
 DATOS.mkdir(parents=True, exist_ok=True)
 
 for _flujo in (sys.stdout, sys.stderr):
@@ -1855,6 +1862,13 @@ def _avisar_en_pantalla(titulo: str, mensaje: str) -> None:
         import ctypes
 
         ctypes.windll.user32.MessageBoxW(0, mensaje, titulo, 0x40)
+    elif sys.platform == "darwin":
+        # Sin consola (la .app de macOS): un diálogo nativo con osascript.
+        guion = f"display dialog {json.dumps(mensaje)} with title {json.dumps(titulo)} buttons {{\"OK\"}} default button 1"
+        try:
+            subprocess.run(["osascript", "-e", guion], check=False)
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
