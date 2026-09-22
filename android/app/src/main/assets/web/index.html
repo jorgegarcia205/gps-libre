@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>GPS Libre</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root { --marino:#0f2a4a; --azul:#2563eb; --azul-claro:#e8f0fe; --gris:#64748b; --borde:#e2e8f0; --fondo:#f8fafc; --rojo:#dc2626; --verde:#16a34a; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  [hidden]{ display:none !important; }
+  html,body { margin:0; height:100%; font:15px/1.45 system-ui,-apple-system,"Roboto",sans-serif; color:#0f172a; overscroll-behavior:none; }
+  #mapa { position:fixed; inset:0 0 var(--panel-alto,300px) 0; }
+  .barra-sup { position:fixed; top:0; left:0; right:0; z-index:600; padding:calc(env(safe-area-inset-top) + 8px) 10px 8px; display:flex; gap:8px; align-items:center; }
+  .buscar { flex:1; position:relative; }
+  .buscar input { width:100%; border:none; border-radius:12px; padding:12px 14px; font-size:15px; box-shadow:0 2px 10px rgba(15,42,74,.18); }
+  .resultados { position:absolute; left:0; right:0; top:48px; background:#fff; border-radius:12px; box-shadow:0 8px 24px rgba(15,42,74,.18); overflow:hidden; }
+  .resultados div { padding:11px 13px; font-size:14px; border-bottom:1px solid var(--fondo); }
+  .chip { background:var(--marino); color:#fff; border:none; border-radius:12px; padding:0 12px; height:44px; font-size:13px; font-weight:600; box-shadow:0 2px 10px rgba(15,42,74,.18); }
+  select.idioma { -webkit-appearance:none; appearance:none; text-align:center; padding:0 10px; }
+  .marca-mapa { display:flex; align-items:center; gap:5px; background:#fff; border-radius:10px; padding:5px 9px 5px 7px; box-shadow:0 2px 8px rgba(15,42,74,.22); font-weight:800; font-size:13px; color:var(--marino); user-select:none; }
+  .marca-mapa svg { width:18px; height:18px; display:block; }
+  .contador { position:fixed; top:calc(env(safe-area-inset-top) + 62px); left:50%; transform:translateX(-50%); z-index:600; background:var(--marino); color:#fff; font-size:12.5px; padding:5px 12px; border-radius:99px; box-shadow:0 2px 10px rgba(0,0,0,.2); }
+  .contador b { color:#ffd54a; }
+
+  .panel { position:fixed; left:0; right:0; bottom:0; z-index:600; background:#fff; border-radius:18px 18px 0 0; box-shadow:0 -4px 24px rgba(15,42,74,.16); padding:10px 14px calc(env(safe-area-inset-bottom) + 12px); }
+  .agarre { width:40px; height:4px; border-radius:2px; background:var(--borde); margin:2px auto 10px; }
+  .pestanas { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; background:var(--fondo); padding:4px; border-radius:12px; margin-bottom:10px; }
+  .pestanas button { border:none; background:transparent; border-radius:9px; padding:9px 4px; color:var(--gris); font-size:14px; }
+  .pestanas button.activa { background:#fff; color:var(--marino); font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .ayuda { color:var(--gris); font-size:13px; margin:2px 0 10px; }
+  button.grande { width:100%; border:none; border-radius:12px; padding:14px; font-size:16px; font-weight:600; background:var(--azul); color:#fff; }
+  button.grande:disabled { opacity:.5; }
+  button.gris { background:var(--fondo); color:var(--marino); }
+  .fila { display:flex; gap:8px; align-items:center; }
+  .modos { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .modos button { border:1px solid var(--borde); background:#fff; border-radius:99px; padding:7px 12px; font-size:13px; }
+  .modos button.activa { border-color:var(--azul); background:var(--azul-claro); color:var(--marino); font-weight:600; }
+  .peligro { background:#fff; border:1px solid #fecaca; color:var(--rojo); width:100%; border-radius:12px; padding:12px; font-size:15px; margin-top:8px; }
+  .coords { font-family:ui-monospace,monospace; font-size:13px; color:var(--gris); }
+  .joy { width:180px; height:180px; border-radius:50%; margin:6px auto; background:radial-gradient(circle,#f1f5f9 0 55%,#e2e8f0 56% 100%); position:relative; touch-action:none; }
+  .joy .perilla { width:70px; height:70px; border-radius:50%; background:var(--marino); position:absolute; left:55px; top:55px; box-shadow:0 4px 10px rgba(15,42,74,.35); }
+
+  .tapa { position:fixed; inset:0; z-index:1000; background:#fff; display:flex; flex-direction:column; justify-content:center; padding:26px 22px calc(env(safe-area-inset-bottom) + 26px); overflow-y:auto; }
+  .tapa img.logo, .tapa .logo { width:74px; height:74px; margin:0 auto 14px; display:block; }
+  .tapa h2 { text-align:center; font-size:24px; margin:0 0 6px; color:var(--marino); }
+  .tapa p.sub { text-align:center; color:var(--gris); margin:0 0 20px; }
+  .paso { display:flex; gap:13px; align-items:flex-start; background:var(--fondo); border-radius:14px; padding:13px 15px; margin-bottom:10px; }
+  .paso .n { flex:none; width:28px; height:28px; border-radius:50%; background:var(--azul); color:#fff; font-weight:700; display:grid; place-items:center; }
+  .paso b { display:block; margin-bottom:2px; color:var(--marino); }
+  .paso span { color:var(--gris); font-size:13.5px; }
+  .tapa .grande { margin-top:8px; }
+  .precios { display:flex; flex-direction:column; gap:8px; margin:6px 0 12px; }
+  .precio { display:flex; justify-content:space-between; align-items:center; border:1px solid var(--borde); border-radius:12px; padding:12px 14px; }
+  .precio.destacado { border-color:var(--azul); box-shadow:0 0 0 2px var(--azul-claro); }
+  .precio .etq { font-weight:600; color:var(--marino); }
+  .precio .etq small { display:block; font-weight:400; color:var(--azul); font-size:11px; }
+  .precio .val { font-weight:700; font-size:18px; color:var(--marino); }
+  .descuento { text-align:center; color:var(--verde); font-weight:600; font-size:13px; margin:0 0 10px; }
+  .clave-fila { display:flex; gap:8px; }
+  .clave-fila input { flex:1; border:1px solid var(--borde); border-radius:12px; padding:12px; font-family:ui-monospace,monospace; font-size:13px; }
+  .enlace { background:none; border:none; color:var(--azul); text-decoration:underline; font-size:14px; margin-top:12px; display:block; width:100%; }
+  .aviso { position:fixed; left:50%; bottom:calc(var(--panel-alto,300px) + 16px); transform:translateX(-50%); background:var(--marino); color:#fff; padding:10px 16px; border-radius:10px; z-index:1500; max-width:90vw; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.25); }
+  .aviso.error { background:var(--rojo); }
+  .punto { width:20px; height:20px; border-radius:50%; background:var(--azul); border:3px solid #fff; box-shadow:0 0 0 0 rgba(37,99,235,.5); animation:p 2s infinite; }
+  @keyframes p { 0%{box-shadow:0 0 0 0 rgba(37,99,235,.5);} 70%{box-shadow:0 0 0 16px rgba(37,99,235,0);} 100%{box-shadow:0 0 0 0 rgba(37,99,235,0);} }
+  .destino { width:16px; height:16px; border-radius:50% 50% 50% 0; background:var(--rojo); transform:rotate(-45deg); border:2px solid #fff; }
+  .num { width:24px; height:24px; border-radius:50%; background:var(--marino); color:#fff; font-size:12px; font-weight:700; display:grid; place-items:center; border:2px solid #fff; }
+</style>
+</head>
+<body>
+
+<!-- Bienvenida: pasos para activar la ubicación simulada -->
+<div class="tapa" id="bienvenida" hidden>
+  <svg class="logo" viewBox="0 0 84 84"><rect width="84" height="84" rx="20" fill="#eef3fb"/><path d="M42 18c9 0 16 7 16 16 0 11-16 32-16 32S26 45 26 34c0-9 7-16 16-16z" fill="#2563eb"/><circle cx="42" cy="33" r="6" fill="#fff"/></svg>
+  <h2>GPS Libre</h2>
+  <p class="sub">Pon tu celular en cualquier lugar del mundo, sin PC.</p>
+  <div class="paso"><div class="n">1</div><div><b>Activa las Opciones de desarrollador</b><span>Ajustes → Acerca del teléfono → toca 7 veces «Número de compilación».</span></div></div>
+  <div class="paso"><div class="n">2</div><div><b>Elige GPS Libre como app de ubicación simulada</b><span>Ajustes → Opciones de desarrollador → «Seleccionar app de ubicación simulada» → GPS Libre.</span></div></div>
+  <div class="paso"><div class="n">3</div><div><b>Toca el mapa y ya estás ahí</b><span>Tu celular «aparece» donde toques. También rutas y joystick.</span></div></div>
+  <button class="grande" id="btnEmpezar">Empezar</button>
+  <button class="enlace" id="btnAbrirDev">Abrir Opciones de desarrollador</button>
+</div>
+
+<!-- Muro de compra -->
+<div class="tapa" id="muro" hidden>
+  <svg class="logo" viewBox="0 0 84 84"><rect width="84" height="84" rx="20" fill="#eef3fb"/><path d="M42 18c9 0 16 7 16 16 0 11-16 32-16 32S26 45 26 34c0-9 7-16 16-16z" fill="#2563eb"/><circle cx="42" cy="33" r="6" fill="#fff"/></svg>
+  <h2>Activa GPS Libre</h2>
+  <p class="sub" id="muroTexto">Sigue cambiando tu ubicación sin límite.</p>
+  <div class="precios" id="precios"></div>
+  <p class="descuento" id="muroDescuento" hidden></p>
+  <button class="grande" id="btnComprar">Comprar ahora</button>
+  <p class="ayuda" style="text-align:center;margin:12px 0 4px">¿Ya tienes una clave? Pégala:</p>
+  <div class="clave-fila"><input type="text" id="clave" placeholder="GPSL-..." autocomplete="off"><button class="grande" style="width:auto;padding:12px 16px" id="btnActivar">Activar</button></div>
+  <button class="enlace" id="btnCerrarMuro">Ahora no</button>
+</div>
+
+<!-- Guía si no está seleccionada como app de ubicación simulada -->
+<div class="tapa" id="guiaMock" hidden>
+  <svg class="logo" viewBox="0 0 84 84"><rect width="84" height="84" rx="20" fill="#fff3cd"/><path d="M42 20l20 36H22z" fill="none" stroke="#d97706" stroke-width="5" stroke-linejoin="round"/><path d="M42 34v10M42 50v.5" stroke="#d97706" stroke-width="5" stroke-linecap="round"/></svg>
+  <h2>Falta un paso</h2>
+  <p class="sub" data-ihtml="guia">Para mover el GPS, elige GPS Libre como <b>app de ubicación simulada</b> en Opciones de desarrollador.</p>
+  <div class="paso"><div class="n">1</div><div><b>Abre Opciones de desarrollador</b><span>Con el botón de abajo.</span></div></div>
+  <div class="paso"><div class="n">2</div><div><b>«Seleccionar app de ubicación simulada»</b><span>Elige GPS Libre en la lista.</span></div></div>
+  <div class="paso"><div class="n">3</div><div><b>Vuelve y toca «Mover aquí» otra vez</b></div></div>
+  <button class="grande" id="btnAbrirDev2">Abrir Opciones de desarrollador</button>
+  <button class="enlace" id="btnCerrarGuia">Ya lo hice</button>
+</div>
+
+<div id="mapa"></div>
+<div class="barra-sup">
+  <div class="buscar"><input type="text" id="buscar" placeholder="Buscar lugar o pegar coordenadas" autocomplete="off"><div class="resultados" id="resultados" hidden></div></div>
+  <button class="chip" id="btnComo">¿Cómo?</button>
+  <select class="chip idioma" id="idiomaApp" translate="no" aria-label="Idioma">
+    <option value="es">🇪🇸</option>
+    <option value="en">🇬🇧</option>
+    <option value="fr">🇫🇷</option>
+    <option value="pt">🇧🇷</option>
+    <option value="zh">🇨🇳</option>
+    <option value="ja">🇯🇵</option>
+    <option value="ko">🇰🇷</option>
+  </select>
+</div>
+<div class="contador" id="contador" hidden></div>
+
+<div class="panel" id="panel">
+  <div class="agarre"></div>
+  <div class="pestanas">
+    <button data-tab="tele" class="activa">Teletransportar</button>
+    <button data-tab="ruta">Ruta</button>
+    <button data-tab="joy">Joystick</button>
+  </div>
+
+  <section data-panel="tele">
+    <p class="ayuda">Toca el mapa o busca un lugar, y aparece ahí.</p>
+    <div class="fila" style="margin-bottom:8px"><span class="coords" id="objetivoTxt">Sin punto elegido</span></div>
+    <button class="grande" id="btnTele" disabled>Mover aquí</button>
+  </section>
+
+  <section data-panel="ruta" hidden>
+    <p class="ayuda">Toca el mapa para poner paradas. El celular las recorre por las calles.</p>
+    <div class="modos" id="modos">
+      <button data-v="5" data-perfil="foot" class="activa">🚶 A pie</button>
+      <button data-v="18" data-perfil="bike">🚲 Bici</button>
+      <button data-v="50" data-perfil="car">🚗 Carro</button>
+    </div>
+    <div class="fila"><button class="grande" id="btnIniciar">Iniciar ruta</button><button class="grande gris" style="width:auto;padding:14px 16px" id="btnDetener" disabled>Detener</button></div>
+    <div class="fila" style="margin-top:8px"><button class="grande gris" id="btnDeshacer">Quitar última</button><button class="grande gris" id="btnBorrar">Borrar</button></div>
+  </section>
+
+  <section data-panel="joy" hidden>
+    <p class="ayuda" style="text-align:center">Arrastra la perilla para caminar. Suelta para parar.</p>
+    <div class="joy" id="joy"><div class="perilla" id="perilla"></div></div>
+  </section>
+
+  <button class="peligro" id="btnRestaurar">Volver a mi GPS real</button>
+</div>
+
+<div class="aviso" id="aviso" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+const A = window.Android || null;   // puente nativo; null si se abre en un navegador normal
+
+let avisoT;
+const TT = (s)=> (window.__trad ? window.__trad(s) : s);   // traducir cadena fija al idioma activo
+function avisar(t, err=false){ const e=$('#aviso'); e.textContent=TT(t); e.className='aviso'+(err?' error':''); e.hidden=false; clearTimeout(avisoT); avisoT=setTimeout(()=>e.hidden=true, err?7000:3000); }
+
+// ---------- geometría ----------
+const R=6371000, rad=x=>x*Math.PI/180, deg=x=>x*180/Math.PI;
+function dist(a,b){ const la1=rad(a[0]),la2=rad(b[0]),dla=rad(b[0]-a[0]),dlo=rad(b[1]-a[1]); const h=Math.sin(dla/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+function rumbo(a,b){ const la1=rad(a[0]),la2=rad(b[0]),dlo=rad(b[1]-a[1]); const x=Math.sin(dlo)*Math.cos(la2),y=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dlo); return (deg(Math.atan2(x,y))+360)%360; }
+function mover(p,rb,m){ const la1=rad(p[0]),lo1=rad(p[1]),th=rad(rb),d=m/R; const la2=Math.asin(Math.sin(la1)*Math.cos(d)+Math.cos(la1)*Math.sin(d)*Math.cos(th)); const lo2=lo1+Math.atan2(Math.sin(th)*Math.sin(d)*Math.cos(la1),Math.cos(d)-Math.sin(la1)*Math.sin(la2)); return [deg(la2),(deg(lo2)+540)%360-180]; }
+function largo(pts){ let t=0; for(let i=1;i<pts.length;i++)t+=dist(pts[i-1],pts[i]); return t; }
+
+// ---------- mapa ----------
+const mapa = L.map('mapa',{zoomControl:false}).setView([4.711,-74.072],13);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(mapa);
+L.control.zoom({position:'topright'}).addTo(mapa);
+const ControlMarca = L.Control.extend({ onAdd(){ const d=L.DomUtil.create('div','marca-mapa'); d.innerHTML='<svg viewBox="0 0 84 84"><rect width="84" height="84" rx="20" fill="#2563eb"/><path d="M42 18c9 0 16 7 16 16 0 11-16 32-16 32S26 45 26 34c0-9 7-16 16-16z" fill="#fff"/><circle cx="42" cy="33" r="6" fill="#2563eb"/></svg><span translate="no">GPS Libre</span>'; return d; } });
+new ControlMarca({ position:'topleft' }).addTo(mapa);
+const ico=(h,t,a)=>L.divIcon({className:'',html:h,iconSize:[t,t],iconAnchor:a||[t/2,t/2]});
+const mPunto=L.marker([0,0],{icon:ico('<div class="punto"></div>',20),interactive:false,zIndexOffset:1000});
+const mDestino=L.marker([0,0],{icon:ico('<div class="destino"></div>',16,[8,16])});
+const linea=L.polyline([],{color:'#2563eb',weight:6,opacity:.85}).addTo(mapa);
+let mParadas=[];
+
+// ajustar alto del mapa al panel
+function ajustarPanel(){ document.documentElement.style.setProperty('--panel-alto', $('#panel').offsetHeight+'px'); setTimeout(()=>mapa.invalidateSize(),50); }
+window.addEventListener('resize', ajustarPanel);
+
+// ---------- estado ----------
+let tab='tele', objetivo=null, paradas=[], posicion=null, perfil='foot', velocidad=5, licencia={restantes:2,licenciado:false};
+
+function leerLicencia(){ try{ licencia = JSON.parse(A ? A.estadoLicencia() : '{"restantes":2,"licenciado":false,"precios":[]}'); }catch(e){} pintarContador(); }
+function pintarContador(){ const c=$('#contador'); if(!A){ c.hidden=true; return; } if(licencia.licenciado){ c.hidden=true; return; } c.hidden=false; const n=licencia.restantes; c.innerHTML = n>0 ? `${TT('Prueba gratis: te quedan')} <b>${n}</b> ${TT(n===1?'teletransporte':'teletransportes')}` : `${TT('Teletransportes gratis agotados')} · <b>${TT('Activar')}</b>`; }
+$('#contador').addEventListener('click', abrirMuro);
+
+// cobrar contra el puente; devuelve true si se permite (si no, abre el muro)
+function permitir(tipo){ if(!A) return true; const m=A.cobrar(tipo); if(m){ abrirMuro(m); return false; } leerLicencia(); return true; }
+
+function fijar(lat,lon){ // manda la ubicación a Android y comprueba que esté seleccionada como app de mock
+  posicion=[lat,lon]; mPunto.setLatLng(posicion).addTo(mapa);
+  if(A){ A.poner(lat,lon); setTimeout(()=>{ if(A.error()==='mock') $('#guiaMock').hidden=false; }, 400); }
+}
+
+// ---------- pestañas ----------
+$$('.pestanas button').forEach(b=>b.addEventListener('click',()=>{ tab=b.dataset.tab; $$('.pestanas button').forEach(x=>x.classList.toggle('activa',x===b)); $$('section[data-panel]').forEach(s=>s.hidden=s.dataset.panel!==tab); ajustarPanel(); }));
+
+mapa.on('click',e=>{ const p=[e.latlng.lat,e.latlng.lng]; if(tab==='tele') elegir(p); else if(tab==='ruta'){ paradas.push(p); pintarParadas(); } });
+
+// ---------- teletransportar ----------
+function elegir(p){ objetivo=p; mDestino.setLatLng(p).addTo(mapa); $('#objetivoTxt').textContent=p[0].toFixed(5)+', '+p[1].toFixed(5); $('#btnTele').disabled=false; }
+$('#btnTele').addEventListener('click',()=>{ if(!objetivo) return; if(!permitir('teletransporte')) return; fijar(objetivo[0],objetivo[1]); mapa.panTo(objetivo); avisar('Ya estás ahí'); });
+
+// ---------- buscar ----------
+$('#buscar').addEventListener('keydown',e=>{ if(e.key!=='Enter')return; const q=e.target.value.trim(); if(!q)return; const m=q.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/); if(m){ usar([+m[1],+m[2]]); return; } fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=es&q='+encodeURIComponent(q)).then(r=>r.json()).then(l=>{ const c=$('#resultados'); c.innerHTML=''; if(!l.length){avisar('No encontré ese lugar',true);c.hidden=true;return;} l.forEach(r=>{ const d=document.createElement('div'); d.textContent=r.display_name; d.onclick=()=>{ c.hidden=true; $('#buscar').blur(); usar([+r.lat,+r.lon]); }; c.appendChild(d); }); c.hidden=false; }).catch(()=>avisar('Error al buscar',true)); });
+function usar(p){ mapa.setView(p, Math.max(mapa.getZoom(),16)); if(tab==='ruta'){ paradas.push(p); pintarParadas(); } else { if(tab!=='tele'){tab='tele';$$('.pestanas button').forEach(x=>x.classList.toggle('activa',x.dataset.tab==='tele'));$$('section[data-panel]').forEach(s=>s.hidden=s.dataset.panel!=='tele');} elegir(p); } }
+document.addEventListener('click',e=>{ if(!e.target.closest('.buscar')) $('#resultados').hidden=true; });
+
+// ---------- ruta ----------
+$$('#modos button').forEach(b=>b.addEventListener('click',()=>{ velocidad=+b.dataset.v; perfil=b.dataset.perfil; $$('#modos button').forEach(x=>x.classList.toggle('activa',x===b)); }));
+function pintarParadas(){ mParadas.forEach(m=>m.remove()); mParadas=paradas.map((p,i)=>L.marker(p,{icon:ico('<div class="num">'+(i+1)+'</div>',24)}).addTo(mapa)); }
+$('#btnDeshacer').addEventListener('click',()=>{ paradas.pop(); pintarParadas(); });
+$('#btnBorrar').addEventListener('click',()=>{ paradas=[]; pintarParadas(); linea.setLatLngs([]); });
+
+let motor=null;
+async function trazar(pts){ const base = posicion ? [posicion,...pts] : pts; if(base.length<2) return base; try{ const coord=base.map(p=>p[1]+','+p[0]).join(';'); const r=await fetch('https://routing.openstreetmap.de/routed-'+perfil+'/route/v1/driving/'+coord+'?overview=full&geometries=geojson').then(x=>x.json()); if(r.code==='Ok'&&r.routes[0]) return r.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]); }catch(e){} return base; }
+$('#btnIniciar').addEventListener('click',async()=>{ if(paradas.length<1){avisar('Pon al menos una parada',true);return;} if(!permitir('ruta'))return; const pts=await trazar(paradas); if(pts.length<2){avisar('Ruta muy corta',true);return;} linea.setLatLngs(pts); iniciarMotor(pts); });
+$('#btnDetener').addEventListener('click',detenerMotor);
+function iniciarMotor(pts){ detenerMotor(); let acc=[0]; for(let i=1;i<pts.length;i++)acc.push(acc[i-1]+dist(pts[i-1],pts[i])); const total=acc[acc.length-1]; let d=0; fijar(pts[0][0],pts[0][1]); $('#btnDetener').disabled=false; $('#btnIniciar').disabled=true;
+  motor=setInterval(()=>{ d+=velocidad/3.6; if(d>=total){ fijar(pts[pts.length-1][0],pts[pts.length-1][1]); detenerMotor(); avisar('Ruta terminada'); return; } let i=1; while(i<acc.length&&acc[i]<d)i++; const f=(d-acc[i-1])/(acc[i]-acc[i-1]||1); const a=pts[i-1],b=pts[i]; fijar(a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f); if($('#seguir')) mapa.panTo(posicion); },1000); }
+function detenerMotor(){ if(motor)clearInterval(motor); motor=null; $('#btnDetener').disabled=true; $('#btnIniciar').disabled=false; }
+
+// ---------- joystick ----------
+let joyRumbo=null, joyInt=null;
+const joy=$('#joy'), perilla=$('#perilla');
+function joyMover(e){ const r=joy.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; let dx=t.clientX-(r.left+r.width/2), dy=t.clientY-(r.top+r.height/2); const max=r.width/2-35,dd=Math.hypot(dx,dy); if(dd>max){dx=dx/dd*max;dy=dy/dd*max;} perilla.style.transform=`translate(${dx}px,${dy}px)`; joyRumbo = Math.hypot(dx,dy)<max*0.3 ? null : (Math.atan2(dx,-dy)*180/Math.PI+360)%360; }
+function joySoltar(){ perilla.style.transform=''; joyRumbo=null; }
+joy.addEventListener('touchstart',e=>{ e.preventDefault(); if(!posicion){avisar('Primero teletranspórtate a un punto',true);return;} if(!permitir('joystick'))return; joyMover(e); if(!joyInt) joyInt=setInterval(()=>{ if(joyRumbo!=null&&posicion){ const n=mover(posicion,joyRumbo,velocidad/3.6*0.5); fijar(n[0],n[1]); } },500); },{passive:false});
+joy.addEventListener('touchmove',e=>{ e.preventDefault(); joyMover(e); },{passive:false});
+joy.addEventListener('touchend',joySoltar);
+
+// ---------- restaurar ----------
+$('#btnRestaurar').addEventListener('click',()=>{ detenerMotor(); if(A)A.detener(); mPunto.remove(); posicion=null; avisar('Volviste a tu GPS real'); });
+
+// ---------- muro ----------
+function abrirMuro(msg){ leerLicencia(); if(typeof msg==='string'&&msg) $('#muroTexto').textContent=msg; const c=$('#precios'); c.innerHTML=''; (licencia.precios||[]).forEach(p=>{ const d=document.createElement('div'); d.className='precio'+(p.destacado?' destacado':''); d.innerHTML=`<span class="etq">${p.nombre}${p.destacado?'<small>El más elegido</small>':''}</span><span class="val">${p.precio}</span>`; c.appendChild(d); }); const dd=$('#muroDescuento'); dd.textContent=licencia.descuento?('🎁 '+licencia.descuento):''; dd.hidden=!licencia.descuento; $('#muro').hidden=false; }
+$('#btnCerrarMuro').addEventListener('click',()=>$('#muro').hidden=true);
+$('#btnComprar').addEventListener('click',()=>avisar('El botón de compra se activa cuando conectes tu pasarela de pago (Lemon Squeezy).',true));
+$('#btnActivar').addEventListener('click',()=>{ const k=$('#clave').value.trim(); if(!k){avisar('Pega tu clave',true);return;} if(A&&A.activarLicencia(k)){ $('#muro').hidden=true; $('#clave').value=''; leerLicencia(); avisar('¡Licencia activada!'); } else avisar('Esa clave no es válida o está vencida',true); });
+
+// ---------- guías ----------
+$('#btnComo').addEventListener('click',()=>$('#bienvenida').hidden=false);
+$('#btnEmpezar').addEventListener('click',()=>{ $('#bienvenida').hidden=true; try{localStorage.setItem('vista','1');}catch(e){} });
+$('#btnAbrirDev').addEventListener('click',()=>A&&A.abrirAjustesDesarrollador());
+$('#btnAbrirDev2').addEventListener('click',()=>A&&A.abrirAjustesDesarrollador());
+$('#btnCerrarGuia').addEventListener('click',()=>$('#guiaMock').hidden=true);
+
+// ---------- arranque ----------
+leerLicencia();
+ajustarPanel();
+let vista=false; try{ vista=localStorage.getItem('vista')==='1'; }catch(e){}
+if(!vista) $('#bienvenida').hidden=false;
+
+// ================== TRADUCCIÓN 7 IDIOMAS ==================
+// Índices de cada traducción: [en, fr, pt, zh, ja, ko]
+(function(){
+  const IDX = { en:0, fr:1, pt:2, zh:3, ja:4, ko:5 };
+  const D = {
+    "Pon tu celular en cualquier lugar del mundo, sin PC.":["Put your phone anywhere in the world, no PC.","Placez votre téléphone n'importe où dans le monde, sans PC.","Coloque seu celular em qualquer lugar do mundo, sem PC.","把你的手机放到世界任何地方，无需电脑。","PCなしで、スマホを世界のどこへでも。","PC 없이 휴대폰을 세계 어디로든."],
+    "Activa las Opciones de desarrollador":["Enable Developer options","Activez les options pour développeurs","Ative as Opções de desenvolvedor","启用开发者选项","開発者向けオプションを有効にする","개발자 옵션 켜기"],
+    "Ajustes → Acerca del teléfono → toca 7 veces «Número de compilación».":["Settings → About phone → tap “Build number” 7 times.","Paramètres → À propos du téléphone → touchez 7 fois « Numéro de build ».","Configurações → Sobre o telefone → toque 7 vezes em «Número da versão».","设置 → 关于手机 → 连续点按7次「版本号」。","設定 → 端末情報 → 「ビルド番号」を7回タップ。","설정 → 휴대전화 정보 → '빌드 번호'를 7번 탭."],
+    "Elige GPS Libre como app de ubicación simulada":["Choose GPS Libre as the mock location app","Choisissez GPS Libre comme application de position fictive","Escolha o GPS Libre como app de localização simulada","选择 GPS Libre 作为模拟位置应用","GPS Libre を仮の現在地アプリに設定","GPS Libre를 모의 위치 앱으로 선택"],
+    "Ajustes → Opciones de desarrollador → «Seleccionar app de ubicación simulada» → GPS Libre.":["Settings → Developer options → “Select mock location app” → GPS Libre.","Paramètres → Options pour développeurs → « Sélectionner l'application de position fictive » → GPS Libre.","Configurações → Opções de desenvolvedor → «Selecionar app de localização simulada» → GPS Libre.","设置 → 开发者选项 → 「选择模拟位置应用」→ GPS Libre。","設定 → 開発者向けオプション → 「仮の現在地アプリを選択」→ GPS Libre。","설정 → 개발자 옵션 → '모의 위치 앱 선택' → GPS Libre."],
+    "Toca el mapa y ya estás ahí":["Tap the map and you're there","Touchez la carte et vous y êtes","Toque no mapa e você já está lá","点一下地图，你就到那儿了","地図をタップすればそこに移動","지도를 탭하면 바로 그곳으로"],
+    "Tu celular «aparece» donde toques. También rutas y joystick.":["Your phone “appears” wherever you tap. Routes and joystick too.","Votre téléphone « apparaît » là où vous touchez. Aussi itinéraires et joystick.","Seu celular «aparece» onde você tocar. Também rotas e joystick.","你点哪里，手机就「出现」在哪里。也支持路线和摇杆。","タップした場所にスマホが「出現」。ルートやジョイスティックも。","탭한 곳에 휴대폰이 '나타납니다'. 경로와 조이스틱도."],
+    "Empezar":["Start","Commencer","Começar","开始","はじめる","시작"],
+    "Abrir Opciones de desarrollador":["Open Developer options","Ouvrir les options pour développeurs","Abrir Opções de desenvolvedor","打开开发者选项","開発者向けオプションを開く","개발자 옵션 열기"],
+    "Activa GPS Libre":["Activate GPS Libre","Activez GPS Libre","Ative o GPS Libre","激活 GPS Libre","GPS Libre を有効化","GPS Libre 활성화"],
+    "Sigue cambiando tu ubicación sin límite.":["Keep changing your location without limits.","Continuez à changer votre position sans limite.","Continue mudando sua localização sem limite.","无限制地继续更改你的位置。","制限なしで位置を変え続けよう。","제한 없이 계속 위치를 바꾸세요."],
+    "Comprar ahora":["Buy now","Acheter maintenant","Comprar agora","立即购买","今すぐ購入","지금 구매"],
+    "¿Ya tienes una clave? Pégala:":["Already have a key? Paste it:","Vous avez déjà une clé ? Collez-la :","Já tem uma chave? Cole aqui:","已经有密钥？粘贴到这里：","キーをお持ちですか？貼り付けてください：","이미 키가 있나요? 붙여넣기:"],
+    "Activar":["Activate","Activer","Ativar","激活","有効化","활성화"],
+    "Ahora no":["Not now","Pas maintenant","Agora não","以后再说","あとで","나중에"],
+    "Falta un paso":["One step left","Il reste une étape","Falta um passo","还差一步","あと1ステップ","한 단계 남음"],
+    "Abre Opciones de desarrollador":["Open Developer options","Ouvrez les options pour développeurs","Abra as Opções de desenvolvedor","打开开发者选项","開発者向けオプションを開く","개발자 옵션 열기"],
+    "Con el botón de abajo.":["With the button below.","Avec le bouton ci-dessous.","Com o botão abaixo.","用下方的按钮。","下のボタンで。","아래 버튼으로."],
+    "«Seleccionar app de ubicación simulada»":["“Select mock location app”","« Sélectionner l'application de position fictive »","«Selecionar app de localização simulada»","「选择模拟位置应用」","「仮の現在地アプリを選択」","'모의 위치 앱 선택'"],
+    "Elige GPS Libre en la lista.":["Choose GPS Libre from the list.","Choisissez GPS Libre dans la liste.","Escolha o GPS Libre na lista.","在列表中选择 GPS Libre。","リストから GPS Libre を選択。","목록에서 GPS Libre를 선택하세요."],
+    "Vuelve y toca «Mover aquí» otra vez":["Come back and tap “Move here” again","Revenez et touchez de nouveau « Déplacer ici »","Volte e toque em «Mover aqui» novamente","返回并再次点按「移到这里」","戻って「ここに移動」をもう一度タップ","돌아와서 '여기로 이동'을 다시 탭"],
+    "Ya lo hice":["Done","C'est fait","Já fiz","我做好了","完了しました","완료했어요"],
+    "Buscar lugar o pegar coordenadas":["Search a place or paste coordinates","Chercher un lieu ou coller des coordonnées","Buscar lugar ou colar coordenadas","搜索地点或粘贴坐标","場所を検索、または座標を貼り付け","장소 검색 또는 좌표 붙여넣기"],
+    "¿Cómo?":["How?","Comment ?","Como?","怎么用？","使い方","사용법?"],
+    "Teletransportar":["Teleport","Téléporter","Teletransportar","瞬移","テレポート","순간이동"],
+    "Ruta":["Route","Itinéraire","Rota","路线","ルート","경로"],
+    "Joystick":["Joystick","Joystick","Joystick","摇杆","ジョイスティック","조이스틱"],
+    "Toca el mapa o busca un lugar, y aparece ahí.":["Tap the map or search a place, and you appear there.","Touchez la carte ou cherchez un lieu, et vous y apparaissez.","Toque no mapa ou busque um lugar, e você aparece lá.","点一下地图或搜索地点，你就出现在那里。","地図をタップするか場所を検索すると、そこに現れます。","지도를 탭하거나 장소를 검색하면 그곳에 나타납니다."],
+    "Sin punto elegido":["No point selected","Aucun point choisi","Nenhum ponto escolhido","未选择地点","地点が未選択","선택된 지점 없음"],
+    "Mover aquí":["Move here","Déplacer ici","Mover aqui","移到这里","ここに移動","여기로 이동"],
+    "Toca el mapa para poner paradas. El celular las recorre por las calles.":["Tap the map to add stops. Your phone follows the streets between them.","Touchez la carte pour ajouter des arrêts. Le téléphone les parcourt par les rues.","Toque no mapa para adicionar paradas. O celular percorre pelas ruas.","点地图添加停靠点，手机会沿街道走完。","地図をタップして経由地を追加。スマホが道路沿いに移動します。","지도를 탭해 정류지를 추가하세요. 휴대폰이 거리를 따라 이동합니다."],
+    "🚶 A pie":["🚶 Walk","🚶 À pied","🚶 A pé","🚶 步行","🚶 徒歩","🚶 도보"],
+    "🚲 Bici":["🚲 Bike","🚲 Vélo","🚲 Bike","🚲 骑行","🚲 自転車","🚲 자전거"],
+    "🚗 Carro":["🚗 Car","🚗 Voiture","🚗 Carro","🚗 开车","🚗 車","🚗 자동차"],
+    "Iniciar ruta":["Start route","Démarrer l'itinéraire","Iniciar rota","开始路线","ルート開始","경로 시작"],
+    "Detener":["Stop","Arrêter","Parar","停止","停止","정지"],
+    "Quitar última":["Remove last","Retirer le dernier","Remover última","删除最后一个","最後を削除","마지막 제거"],
+    "Borrar":["Clear","Effacer","Limpar","清除","クリア","지우기"],
+    "Arrastra la perilla para caminar. Suelta para parar.":["Drag the knob to walk. Release to stop.","Faites glisser le bouton pour marcher. Relâchez pour arrêter.","Arraste o botão para caminhar. Solte para parar.","拖动摇杆行走，松开即停。","ノブをドラッグで移動、離すと停止。","노브를 끌어 이동하고, 놓으면 멈춥니다."],
+    "Volver a mi GPS real":["Back to my real GPS","Revenir à mon vrai GPS","Voltar ao meu GPS real","回到我的真实GPS","本当のGPSに戻す","실제 GPS로 되돌리기"],
+    // dinámicos (precios, avisos, contador)
+    "Mensual":["Monthly","Mensuel","Mensal","每月","月額","월간"],
+    "Trimestral":["Quarterly","Trimestriel","Trimestral","每季度","3か月","분기"],
+    "Anual":["Yearly","Annuel","Anual","每年","年額","연간"],
+    "El más elegido":["Most popular","Le plus choisi","O mais escolhido","最受欢迎","人気No.1","가장 인기"],
+    "20% de descuento en tu primera compra":["20% off your first purchase","20 % de réduction sur votre premier achat","20% de desconto na sua primeira compra","首次购买享8折优惠","初回購入20%オフ","첫 구매 20% 할인"],
+    "Prueba gratis: te quedan":["Free trial: you have","Essai gratuit : il vous reste","Teste grátis: você tem","免费试用：还剩","無料お試し：残り","무료 체험: 남은"],
+    "teletransporte":["teleport","téléportation","teletransporte","次瞬移","回テレポート","회 순간이동"],
+    "teletransportes":["teleports","téléportations","teletransportes","次瞬移","回テレポート","회 순간이동"],
+    "Teletransportes gratis agotados":["Free teleports used up","Téléportations gratuites épuisées","Teletransportes grátis esgotados","免费瞬移已用完","無料テレポートを使い切りました","무료 순간이동 소진"],
+    "Ya estás ahí":["You're there now","Vous y êtes","Você já está lá","你已经在那里了","移動しました","이동했어요"],
+    "Volviste a tu GPS real":["Back to your real GPS","Retour à votre vrai GPS","Voltou ao seu GPS real","已回到真实GPS","本当のGPSに戻りました","실제 GPS로 돌아왔어요"],
+    "Ruta terminada":["Route finished","Itinéraire terminé","Rota terminada","路线完成","ルート終了","경로 완료"],
+    "Ruta muy corta":["Route too short","Itinéraire trop court","Rota muito curta","路线太短","ルートが短すぎます","경로가 너무 짧아요"],
+    "Pon al menos una parada":["Add at least one stop","Ajoutez au moins un arrêt","Adicione ao menos uma parada","至少添加一个停靠点","経由地を1つ以上追加してください","정류지를 하나 이상 추가하세요"],
+    "Primero teletranspórtate a un punto":["Teleport to a point first","Téléportez-vous d'abord à un point","Primeiro teletransporte-se a um ponto","请先瞬移到一个点","先に地点へテレポートしてください","먼저 한 지점으로 순간이동하세요"],
+    "No encontré ese lugar":["Couldn't find that place","Lieu introuvable","Não encontrei esse lugar","找不到该地点","その場所が見つかりません","그 장소를 찾지 못했어요"],
+    "Error al buscar":["Search error","Erreur de recherche","Erro ao buscar","搜索出错","検索エラー","검색 오류"],
+    "Pega tu clave":["Paste your key","Collez votre clé","Cole sua chave","请粘贴密钥","キーを貼り付けてください","키를 붙여넣으세요"],
+    "¡Licencia activada!":["License activated!","Licence activée !","Licença ativada!","许可已激活！","ライセンスを有効化しました！","라이선스가 활성화되었습니다!"],
+    "Esa clave no es válida o está vencida":["That key is invalid or expired","Cette clé est invalide ou expirée","Essa chave é inválida ou expirou","该密钥无效或已过期","このキーは無効か期限切れです","이 키는 유효하지 않거나 만료되었습니다"],
+    "El botón de compra se activa cuando conectes tu pasarela de pago (Lemon Squeezy).":["The buy button turns on once you connect your payment gateway (Lemon Squeezy).","Le bouton d'achat s'active une fois votre passerelle de paiement (Lemon Squeezy) connectée.","O botão de compra é ativado quando você conectar sua plataforma de pagamento (Lemon Squeezy).","连接支付网关（Lemon Squeezy）后，购买按钮即可启用。","決済ゲートウェイ（Lemon Squeezy）を接続すると購入ボタンが有効になります。","결제 게이트웨이(Lemon Squeezy)를 연결하면 구매 버튼이 켜집니다."]
+  };
+  const DHTML = {
+    "guia":{
+      es:'Para mover el GPS, elige GPS Libre como <b>app de ubicación simulada</b> en Opciones de desarrollador.',
+      en:'To move the GPS, choose GPS Libre as the <b>mock location app</b> in Developer options.',
+      fr:"Pour déplacer le GPS, choisissez GPS Libre comme <b>application de position fictive</b> dans les options pour développeurs.",
+      pt:'Para mover o GPS, escolha o GPS Libre como <b>app de localização simulada</b> nas Opções de desenvolvedor.',
+      zh:'要移动 GPS，请在开发者选项中把 GPS Libre 设为<b>模拟位置应用</b>。',
+      ja:'GPSを動かすには、開発者向けオプションで GPS Libre を<b>仮の現在地アプリ</b>に設定してください。',
+      ko:'GPS를 옮기려면 개발자 옵션에서 GPS Libre를 <b>모의 위치 앱</b>으로 선택하세요.'
+    }
+  };
+  const PLACEH = { "buscar":"Buscar lugar o pegar coordenadas" };
+  let LANG = 'es';
+  const ORIG = new WeakMap();
+
+  function trad(s){ if(LANG==='es') return s; const t=(s||'').trim(); if(!t) return s; const e=D[t]; if(!e) return s; const v=e[IDX[LANG]]; return v? s.replace(t,v) : s; }
+  window.__trad = trad;   // usado por avisar() y pintarContador()
+
+  function saltar(n){ const p=n.parentElement; if(!p) return true; const tag=p.tagName; if(tag==='SCRIPT'||tag==='STYLE'||tag==='OPTION') return true; if(p.closest('[translate=no],[data-ihtml]')) return true; return false; }
+
+  function traducir(l){
+    LANG=l;
+    // nodos de texto
+    const w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    const nodos=[]; let x; while(x=w.nextNode()) nodos.push(x);
+    nodos.forEach(n=>{ if(saltar(n)) return; if(!ORIG.has(n)) ORIG.set(n, n.nodeValue); const o=ORIG.get(n); if(o&&o.trim()) n.nodeValue = l==='es'? o : trad(o); });
+    // placeholders
+    for(const id in PLACEH){ const el=document.getElementById(id); if(el){ const o=PLACEH[id]; el.placeholder = l==='es'? o : (D[o]? (D[o][IDX[l]]||o) : o); } }
+    // contenido mixto <b>...</b>
+    for(const k in DHTML){ const el=document.querySelector('[data-ihtml="'+k+'"]'); if(el){ el.innerHTML = DHTML[k][l]||DHTML[k].es; } }
+    document.documentElement.lang = l;
+    pintarContador();
+  }
+
+  // traducir nodos añadidos después (resultados de búsqueda, avisos)
+  let pend=false;
+  const mo=new MutationObserver(muts=>{
+    if(LANG==='es'||pend) return; pend=true;
+    requestAnimationFrame(()=>{ pend=false;
+      const w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+      const nodos=[]; let x; while(x=w.nextNode()) nodos.push(x);
+      nodos.forEach(n=>{ if(saltar(n)) return; if(ORIG.has(n)) return; const o=n.nodeValue; ORIG.set(n,o); if(o&&o.trim()&&D[o.trim()]) n.nodeValue=trad(o); });
+    });
+  });
+  mo.observe(document.body,{childList:true,subtree:true});
+
+  function fijar(l){ try{localStorage.setItem('gps_idioma_app',l);}catch(e){} const sel=document.getElementById('idiomaApp'); if(sel) sel.value=l; traducir(l); }
+  const sel=document.getElementById('idiomaApp');
+  if(sel) sel.addEventListener('change',()=>fijar(sel.value));
+
+  // auto-detección
+  let ini='es';
+  try{ const g=localStorage.getItem('gps_idioma_app'); if(g&&(g==='es'||IDX[g]!==undefined)) ini=g; else { const nav=(navigator.language||'es').slice(0,2).toLowerCase(); if(IDX[nav]!==undefined) ini=nav; } }catch(e){}
+  if(ini!=='es') fijar(ini); else if(sel) sel.value='es';
+})();
+</script>
+</body>
+</html>

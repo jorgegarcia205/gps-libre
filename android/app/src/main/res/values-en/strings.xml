@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GPS Libre</string>
+    <string name="canal_nombre">Mock location</string>
+    <string name="noti_titulo">GPS Libre is active</string>
+    <string name="noti_texto">Your mock location is on. Tap to come back.</string>
+</resources>

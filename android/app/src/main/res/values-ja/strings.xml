@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GPS Libre</string>
+    <string name="canal_nombre">仮の現在地</string>
+    <string name="noti_titulo">GPS Libre は動作中</string>
+    <string name="noti_texto">仮の現在地がオンです。タップで戻る。</string>
+</resources>

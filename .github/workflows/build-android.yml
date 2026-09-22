@@ -1,0 +1,46 @@
+name: Build (Android APK)
+
+# Compila la app de Android (carpeta android/) en la nube y deja el APK descargable.
+# APK de depuración (firmado con la clave debug de Gradle): sirve para probar y repartir a mano.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'android/**'
+      - '.github/workflows/build-android.yml'
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preparar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Preparar el SDK de Android
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar plataforma y build-tools
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Compilar el APK (debug)
+        run: gradle -p android assembleDebug --no-daemon --stacktrace
+
+      - name: Subir el APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: GPSLibre-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

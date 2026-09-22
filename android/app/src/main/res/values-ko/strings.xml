@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GPS Libre</string>
+    <string name="canal_nombre">모의 위치</string>
+    <string name="noti_titulo">GPS Libre 실행 중</string>
+    <string name="noti_texto">모의 위치가 켜져 있습니다. 탭하여 돌아가기.</string>
+</resources>

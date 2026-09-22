@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GPS Libre</string>
+    <string name="canal_nombre">Localização simulada</string>
+    <string name="noti_titulo">GPS Libre está ativo</string>
+    <string name="noti_texto">Sua localização simulada está ligada. Toque para voltar.</string>
+</resources>

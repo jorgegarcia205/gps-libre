@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema sin barra de acción: la interfaz es el WebView a pantalla completa. -->
+    <style name="Theme.GpsLibre" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@color/marino</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
