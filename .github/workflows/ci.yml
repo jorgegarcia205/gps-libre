@@ -1,0 +1,56 @@
+name: Build (Windows)
+
+# Comprueba que el proyecto compila y se empaqueta desde un checkout limpio,
+# sin ningún secreto (la llave privada de licencias NO se necesita para construir).
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Compilar (sintaxis) todo el Python
+        run: python -m compileall -q servidor.py empaquetar
+
+      - name: Verificar iconos de marca presentes
+        run: python empaquetar/generar_icono.py
+
+      - name: Construir la app con PyInstaller
+        run: python -m PyInstaller --noconfirm --clean --log-level WARN --distpath empaquetar/dist --workpath empaquetar/build empaquetar/gpslibre.spec
+
+      - name: Comprobar salida del build
+        run: |
+          if (Test-Path "empaquetar/dist/GPSLibre/GPSLibre.exe") { Write-Host "OK: GPSLibre.exe generado" } else { Write-Error "No se generó GPSLibre.exe"; exit 1 }
+
+      - name: Instalar Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Construir el instalador (Inno Setup)
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Q "empaquetar/instalador.iss"
+          if (Test-Path "empaquetar/salida/GPSLibre-Instalador-1.0.0.exe") { Write-Host "OK: instalador generado" } else { Write-Error "No se generó el instalador"; exit 1 }
+
+      - name: Subir el instalador como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: GPSLibre-Instalador
+          path: empaquetar/salida/*.exe
+          if-no-files-found: error
